@@ -1,0 +1,170 @@
+/* ========== 看板布局 ========== */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+/* ========== 统计卡片 ========== */
+.stat-card {
+  padding: 16px;
+  border-radius: var(--radius-md);
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.stat-card.active {
+  outline: 3px solid currentColor;
+  outline-offset: 2px;
+}
+
+.stat-count {
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.stat-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+/* 统计卡片阶段背景色 */
+.stat-card[data-stage="verifying"] {
+  background: var(--bg-verifying);
+}
+.stat-card[data-stage="detecting"] {
+  background: var(--bg-detecting);
+}
+.stat-card[data-stage="normal"] {
+  background: var(--bg-normal);
+}
+.stat-card[data-stage="danger"] {
+  background: var(--bg-danger);
+}
+.stat-card[data-stage="wearing"] {
+  background: var(--bg-wearing);
+}
+
+/* ========== 看板主体 ========== */
+.kanban-board {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  min-height: 400px;
+}
+
+.kanban-column {
+  flex: 1;
+  min-width: 260px;
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+}
+
+.kanban-column.drag-over {
+  background: #d0e8ff;
+  border: 2px dashed var(--color-verifying);
+}
+
+.column-header {
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+}
+
+.column-count {
+  background: var(--bg-white);
+  border-radius: 10px;
+  padding: 2px 8px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.column-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ========== 问题卡片 ========== */
+.issue-card {
+  background: var(--bg-white);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  cursor: grab;
+  border-left: 4px solid var(--border-color);
+  transition: box-shadow 0.2s, opacity 0.2s;
+}
+
+.issue-card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.issue-card.dragging {
+  opacity: 0.5;
+}
+
+.issue-card-id {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.issue-card-title {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+.issue-card-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 6px;
+}
+
+.issue-card-tags {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+/* ========== 卡片标签 ========== */
+.card-tag {
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  background: var(--bg-verifying);
+  color: var(--color-verifying);
+}
+
+/* ========== 阶段颜色 ========== */
+.stage-verifying { border-left-color: var(--color-verifying); }
+.stage-detecting { border-left-color: var(--color-detecting); }
+.stage-normal { border-left-color: var(--color-normal); }
+.stage-danger { border-left-color: var(--color-danger); }
+.stage-wearing { border-left-color: var(--color-wearing); }
+
+/* ========== 响应式 ========== */
+@media (max-width: 1024px) {
+  .kanban-column { min-width: 280px; }
+}
+@media (max-width: 768px) {
+  .stats-row { grid-template-columns: repeat(3, 1fr); }
+  .kanban-board { flex-direction: column; }
+  .kanban-column { min-width: 100%; }
+}
