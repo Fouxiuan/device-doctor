@@ -1,0 +1,279 @@
+/* ========== 设备管理工具栏 ========== */
+.devices-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.devices-search {
+  display: flex;
+  gap: 8px;
+  flex: 1;
+  min-width: 280px;
+}
+
+.devices-search .search-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  outline: none;
+}
+
+.devices-search .search-input:focus {
+  border-color: var(--color-verifying);
+}
+
+.devices-status-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.status-filter-item {
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  cursor: pointer;
+  border: 1px solid var(--border-color);
+  background: var(--bg-white);
+  color: var(--text-secondary);
+  transition: all 0.2s;
+}
+
+.status-filter-item:hover {
+  border-color: var(--color-verifying);
+  color: var(--color-verifying);
+}
+
+.status-filter-item.active {
+  background: var(--color-verifying);
+  color: #fff;
+  border-color: var(--color-verifying);
+}
+
+/* ========== 设备卡片网格 ========== */
+.devices-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.device-card {
+  background: var(--bg-white);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+
+.device-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.device-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.device-id {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.device-status-badge {
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.device-card-name {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.device-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+.device-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color);
+}
+
+.issue-count {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.device-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.btn-sm {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+/* ========== 设备详情弹窗 ========== */
+.device-detail-info {
+  background: var(--bg-card);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.detail-row:last-child {
+  border-bottom: none;
+}
+
+.detail-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.detail-value {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.detail-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: var(--text-primary);
+}
+
+.detail-issues-list {
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.detail-issue-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.2s;
+  font-size: 13px;
+}
+
+.detail-issue-item:hover {
+  background: var(--bg-verifying);
+}
+
+.detail-issue-item .issue-stage {
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.detail-issue-item .issue-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.detail-issue-item .issue-assignee {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.detail-issue-item .issue-time {
+  color: var(--text-muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.detail-no-issues {
+  text-align: center;
+  padding: 20px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+/* 异常阶段颜色 */
+.detail-issue-item .stage-verifying { background: var(--bg-verifying); color: var(--color-verifying); }
+.detail-issue-item .stage-detecting { background: var(--bg-detecting); color: var(--color-detecting); }
+.detail-issue-item .stage-normal { background: var(--bg-normal); color: var(--color-normal); }
+.detail-issue-item .stage-danger { background: var(--bg-danger); color: var(--color-danger); }
+.detail-issue-item .stage-wearing { background: var(--bg-wearing); color: var(--color-wearing); }
+
+/* 高亮动画 */
+@keyframes highlight-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(25, 118, 210, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(25, 118, 210, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(25, 118, 210, 0); }
+}
+
+/* ========== 空状态 ========== */
+.empty-state {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 48px 20px;
+  color: var(--text-muted);
+}
+
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.empty-text {
+  font-size: 14px;
+}
+
+/* ========== 响应式 ========== */
+@media (max-width: 768px) {
+  .devices-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .devices-search {
+    min-width: auto;
+  }
+
+  .devices-status-filter {
+    justify-content: center;
+  }
+
+  .devices-grid {
+    grid-template-columns: 1fr;
+  }
+}
