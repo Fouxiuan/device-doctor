@@ -34,12 +34,13 @@ const DeviceManager = (function() {
         const allDevices = devices.length;
 
         if (searchQuery) {
-            devices = devices.filter(d => 
+            devices = devices.filter(d =>
                 (d.deviceId && d.deviceId.toLowerCase().includes(searchQuery)) ||
                 (d.name && d.name.toLowerCase().includes(searchQuery)) ||
                 (d.model && d.model.toLowerCase().includes(searchQuery)) ||
                 (d.type && d.type.toLowerCase().includes(searchQuery)) ||
-                (d.remark && d.remark.toLowerCase().includes(searchQuery))
+                (d.remark && d.remark.toLowerCase().includes(searchQuery)) ||
+                (d.tags && d.tags.some(t => t.toLowerCase().includes(searchQuery)))
             );
         }
 
@@ -113,7 +114,9 @@ const DeviceManager = (function() {
                     <div class="device-name">${escapeHtml(device.name || '未命名设备')}</div>
                     <div class="device-id">${escapeHtml(device.deviceId || '无编号')}</div>
                 </div>
-                
+
+                ${renderDeviceTags(device.tags)}
+
                 <div class="device-meta">
                     <div class="device-meta-item">
                         <span class="device-meta-label">型号</span>
@@ -166,6 +169,15 @@ const DeviceManager = (function() {
         return labels[status] || '使用中';
     }
 
+    function renderDeviceTags(tags) {
+        if (!tags || !Array.isArray(tags) || tags.length === 0) return '';
+        return `
+            <div class="device-tags" role="group" aria-label="设备标签">
+                ${tags.map(tag => `<span class="device-tag">${escapeHtml(tag)}</span>`).join('')}
+            </div>
+        `;
+    }
+
     function formatDatetime(datetimeStr) {
         if (!datetimeStr) return '-';
         const d = new Date(datetimeStr);
@@ -205,7 +217,9 @@ const DeviceManager = (function() {
             Store.deleteDevice(id);
             render();
             if (window.App && typeof window.App.showToast === 'function') {
+
                 window.App.showToast('设备已删除', 'success');
+
             }
         }
     }

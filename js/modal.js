@@ -745,7 +745,7 @@ const Modal = (function() {
     function openDeviceModal(device = null) {
         currentMode = device ? 'edit-device' : 'add-device';
         currentIssue = device;
-        selectedTags = [];
+        selectedTags = device ? [...(device.tags || [])] : [];
         
         const title = device ? '编辑设备' : '新增设备';
         renderDeviceForm(device);
@@ -761,19 +761,20 @@ const Modal = (function() {
     function renderDeviceForm(device) {
         const body = document.getElementById('modal-body');
         const footer = document.getElementById('modal-footer');
-        
+
         const deviceTypes = Store.getDeviceTypes();
+        const allTags = Store.getTags();
         const statuses = [
             { value: 'active', label: '使用中' },
             { value: 'maintenance', label: '维修中' },
             { value: 'retired', label: '已退役' }
         ];
-        
+
         body.innerHTML = `
             <div class="form-row">
                 <div class="form-group">
                     <label class="form-label" for="form-d-deviceId">设备编号 *</label>
-                    <input type="text" class="form-input" id="form-d-deviceId" 
+                    <input type="text" class="form-input" id="form-d-deviceId"
                            name="form-d-deviceId"
                            placeholder="如：A-1023…"
                            value="${escapeHtml(device ? device.deviceId : '')}">
@@ -789,19 +790,19 @@ const Modal = (function() {
                     </select>
                 </div>
             </div>
-            
+
             <div class="form-group">
                 <label class="form-label" for="form-d-name">设备名称 *</label>
-                <input type="text" class="form-input" id="form-d-name" 
+                <input type="text" class="form-input" id="form-d-name"
                        name="form-d-name"
                        placeholder="如：智能手环 Pro…"
                        value="${escapeHtml(device ? device.name : '')}">
             </div>
-            
+
             <div class="form-row">
                 <div class="form-group">
                     <label class="form-label" for="form-d-model">设备型号</label>
-                    <input type="text" class="form-input" id="form-d-model" 
+                    <input type="text" class="form-input" id="form-d-model"
                            name="form-d-model"
                            placeholder="如：SH-Pro-2026…"
                            value="${escapeHtml(device ? device.model : '')}">
@@ -817,38 +818,55 @@ const Modal = (function() {
                     </select>
                 </div>
             </div>
-            
+
             <div class="form-group">
                 <label class="form-label" for="form-d-productionDatetime">出厂日期时间</label>
-                <input type="datetime-local" class="form-input" id="form-d-productionDatetime" 
+                <input type="datetime-local" class="form-input" id="form-d-productionDatetime"
                        name="form-d-productionDatetime"
                        value="${escapeHtml(device ? device.productionDatetime : '')}">
             </div>
-            
+
+            <div class="form-group">
+                <label class="form-label" for="tag-add-input">设备标签</label>
+                <div class="tag-selector" id="tag-selector" role="group" aria-label="设备标签选择">
+                    ${allTags.map(tag => `
+                        <span class="tag-item ${selectedTags.includes(tag) ? 'selected' : ''}" data-tag="${escapeHtml(tag)}" role="button" tabindex="0" aria-pressed="${selectedTags.includes(tag) ? 'true' : 'false'}">
+                            ${escapeHtml(tag)}
+                        </span>
+                    `).join('')}
+                    <div class="tag-input-wrap">
+                        <input type="text" class="tag-add-input" id="tag-add-input" placeholder="添加标签…" autocomplete="off" name="tag-add-d">
+                    </div>
+                </div>
+                <div class="form-hint">点击标签选中或取消，可添加自定义标签</div>
+            </div>
+
             <div class="form-group">
                 <label class="form-label" for="form-d-remark">备注信息</label>
-                <textarea class="form-textarea" id="form-d-remark" 
+                <textarea class="form-textarea" id="form-d-remark"
                           name="form-d-remark"
                           placeholder="设备配置、使用情况、特殊说明等…">${escapeHtml(device ? device.remark : '')}</textarea>
             </div>
         `;
-        
+
         footer.innerHTML = `
             <button class="btn btn-secondary" id="btn-modal-cancel">取消</button>
             <button class="btn btn-primary" id="btn-modal-save-device">
                 ${device ? '保存修改' : '创建设备'}
             </button>
         `;
-        
+
         bindDeviceFormEvents();
     }
 
     function bindDeviceFormEvents() {
         const cancelBtn = document.getElementById('btn-modal-cancel');
         const saveBtn = document.getElementById('btn-modal-save-device');
-        
+
         if (cancelBtn) cancelBtn.addEventListener('click', close);
         if (saveBtn) saveBtn.addEventListener('click', saveDevice);
+
+        bindTagSelector();
     }
 
     function saveDevice() {
@@ -879,6 +897,7 @@ const Modal = (function() {
             model: model || '',
             type: type || '',
             productionDatetime: productionDatetime || '',
+            tags: [...selectedTags],
             remark: remark || ''
         };
         
