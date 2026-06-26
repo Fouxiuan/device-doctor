@@ -233,7 +233,7 @@ const DEMO_DATA = {
         {
             id: "DEV-001",
             deviceId: "A-1023",
-            name: "智能手环 Pro",
+            name: "智能手环 Pro · 温度样机",
             model: "SH-Pro-2026",
             type: "穿戴设备",
             productionDatetime: "2026-01-15T08:30",
@@ -243,7 +243,7 @@ const DEMO_DATA = {
         {
             id: "DEV-002",
             deviceId: "B-2048",
-            name: "健康监测手表",
+            name: "健康监测手表 · 长续航版",
             model: "HW-Watch-X1",
             type: "穿戴设备",
             productionDatetime: "2026-02-20T14:15",
@@ -253,7 +253,7 @@ const DEMO_DATA = {
         {
             id: "DEV-003",
             deviceId: "A-1056",
-            name: "智能手环 Pro",
+            name: "智能手环 Pro · 量产二号",
             model: "SH-Pro-2026",
             type: "穿戴设备",
             productionDatetime: "2026-01-15T09:45",
@@ -263,7 +263,7 @@ const DEMO_DATA = {
         {
             id: "DEV-004",
             deviceId: "C-3001",
-            name: "智能眼镜 Air",
+            name: "智能眼镜 Air · MicroLED 版",
             model: "GL-Air-01",
             type: "AR设备",
             productionDatetime: "2026-03-10T11:20",
@@ -273,7 +273,7 @@ const DEMO_DATA = {
         {
             id: "DEV-005",
             deviceId: "A-1089",
-            name: "智能手环 Pro",
+            name: "智能手环 Pro · 返修机",
             model: "SH-Pro-2026",
             type: "穿戴设备",
             productionDatetime: "2026-01-20T16:00",
@@ -283,7 +283,7 @@ const DEMO_DATA = {
         {
             id: "DEV-006",
             deviceId: "B-2076",
-            name: "健康监测手表",
+            name: "健康监测手表 · ECG 版",
             model: "HW-Watch-X1",
             type: "穿戴设备",
             productionDatetime: "2026-02-28T10:30",
@@ -293,7 +293,7 @@ const DEMO_DATA = {
         {
             id: "DEV-007",
             deviceId: "D-4012",
-            name: "运动手环 Sport",
+            name: "运动手环 Sport · 双频 GPS",
             model: "SH-Sport-G1",
             type: "穿戴设备",
             productionDatetime: "2026-04-05T13:45",
@@ -303,7 +303,7 @@ const DEMO_DATA = {
         {
             id: "DEV-008",
             deviceId: "A-1034",
-            name: "智能手环 Pro",
+            name: "智能手环 Pro · 退役备件",
             model: "SH-Pro-2026",
             type: "穿戴设备",
             productionDatetime: "2026-01-18T15:10",
@@ -313,7 +313,7 @@ const DEMO_DATA = {
         {
             id: "DEV-009",
             deviceId: "B-2015",
-            name: "健康监测手表",
+            name: "健康监测手表 · 工程测试版",
             model: "HW-Watch-X1",
             type: "穿戴设备",
             productionDatetime: "2026-02-10T09:00",
@@ -323,7 +323,7 @@ const DEMO_DATA = {
         {
             id: "DEV-010",
             deviceId: "C-3056",
-            name: "智能眼镜 Air",
+            name: "智能眼镜 Air · 开发者版",
             model: "GL-Air-01",
             type: "AR设备",
             productionDatetime: "2026-03-15T14:30",
