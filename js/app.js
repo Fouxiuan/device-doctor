@@ -62,8 +62,6 @@ const App = (function() {
 
         const configured = typeof AIDoctor !== 'undefined' && AIDoctor.isConfigured();
         const currentKey = configured ? '' : '';
-        const currentModel = (typeof AIDoctor !== 'undefined' && AIDoctor.getConfig().model) || '';
-        const models = (typeof AIDoctor !== 'undefined' && AIDoctor.getModels()) || [];
 
         modal.innerHTML = `
             <div class="modal" style="max-width: 480px;">
@@ -87,15 +85,6 @@ const App = (function() {
                             <br>获取地址：火山引擎方舟平台。Key 仅存储在本地浏览器，不会上传。
                         </div>
                     </div>
-                    <div class="form-group">
-                        <label class="form-label" for="ai-model-select">模型选择</label>
-                        <select class="form-select" id="ai-model-select" name="ai-model-select">
-                            ${models.map(m => `<option value="${m.id}" ${m.id === currentModel ? 'selected' : ''}>${m.label}</option>`).join('')}
-                        </select>
-                        <div class="form-hint">
-                            选择已开通的模型。如需开通新模型，请前往火山方舟控制台。
-                        </div>
-                    </div>
                     <div class="ai-status" style="padding: 12px; border-radius: 8px; background: var(--bg-tertiary); font-size: 13px; margin-top: 8px;">
                         当前状态：<strong>${configured ? '✓ 已启用 AI 诊疗' : '✗ 未配置（使用规则引擎推荐）'}</strong>
                     </div>
@@ -116,7 +105,6 @@ const App = (function() {
         const saveBtn = modal.querySelector('#ai-save');
         const clearBtn = modal.querySelector('#ai-clear-key');
         const input = modal.querySelector('#ai-api-key');
-        const modelSelect = modal.querySelector('#ai-model-select');
 
         const closeModal = () => {
             modal.remove();
@@ -132,23 +120,12 @@ const App = (function() {
         if (saveBtn) {
             saveBtn.addEventListener('click', () => {
                 const key = input.value.trim();
-                const model = modelSelect ? modelSelect.value : '';
-
-                // 保存模型选择（无论是否输入了 Key）
-                if (model && typeof AIDoctor !== 'undefined') {
-                    AIDoctor.setModel(model);
-                }
-
-                if (!key && !configured) {
+                if (!key) {
                     showToast('请输入 API Key', 'error');
                     return;
                 }
-                if (key) {
-                    AIDoctor.setApiKey(key);
-                    showToast('AI 诊疗设置已保存', 'success');
-                } else {
-                    showToast('模型设置已保存', 'success');
-                }
+                AIDoctor.setApiKey(key);
+                showToast('AI 诊疗已启用', 'success');
                 closeModal();
             });
         }
