@@ -14,7 +14,7 @@ desktop.ini
 *.log
 npm-debug.log*
 
-# Dependencies
+# Dependencies (纯前端无构建，无需忽略 node_modules)
 node_modules/
 
 # Build output
