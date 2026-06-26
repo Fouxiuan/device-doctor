@@ -1,184 +1,246 @@
-// dashboard.js — 看板视图 IIFE 模块
-const Dashboard = (function () {
-  'use strict';
+const Dashboard = {
+  _filterStage: null,
+  _dragData: null,
 
-  // ========== 渲染看板 ==========
-  function render() {
-    var viewEl = document.getElementById('view-dashboard');
-    if (!viewEl) return;
+  init() {
+    this.bindEvents();
+    this.render();
+    Store.subscribe(() => this.render());
+  },
 
-    var counts = Store.getStageCounts();
-    var issues = Store.getIssues();
-
-    // 统计卡片
-    var statCardsHtml = '' +
-      '<div class="stat-card" data-stage="verifying" onclick="Dashboard.filterByStage(\'verifying\')">' +
-      '  <div class="stat-icon">📋</div>' +
-      '  <div class="stat-count">' + counts.verifying + '</div>' +
-      '  <div class="stat-label">数据校对</div>' +
-      '</div>' +
-      '<div class="stat-card" data-stage="detecting" onclick="Dashboard.filterByStage(\'detecting\')">' +
-      '  <div class="stat-icon">🔍</div>' +
-      '  <div class="stat-count">' + counts.detecting + '</div>' +
-      '  <div class="stat-label">检测中</div>' +
-      '</div>' +
-      '<div class="stat-card" data-stage="normal" onclick="Dashboard.filterByStage(\'normal\')">' +
-      '  <div class="stat-icon">✅</div>' +
-      '  <div class="stat-count">' + counts.normal + '</div>' +
-      '  <div class="stat-label">判定正常</div>' +
-      '</div>' +
-      '<div class="stat-card" data-stage="danger" onclick="Dashboard.filterByStage(\'danger\')">' +
-      '  <div class="stat-icon">⚠️</div>' +
-      '  <div class="stat-count">' + counts.danger + '</div>' +
-      '  <div class="stat-label">判定危险</div>' +
-      '</div>' +
-      '<div class="stat-card" data-stage="wearing" onclick="Dashboard.filterByStage(\'wearing\')">' +
-      '  <div class="stat-icon">🎽</div>' +
-      '  <div class="stat-count">' + counts.wearing + '</div>' +
-      '  <div class="stat-label">穿戴测试</div>' +
-      '</div>';
-
-    // Kanban 列
-    var stages = [
-      { key: 'verifying', label: '数据校对', icon: '📋' },
-      { key: 'detecting', label: '检测中', icon: '🔍' },
-      { key: 'normal', label: '判定正常', icon: '✅' },
-      { key: 'danger', label: '判定危险', icon: '⚠️' },
-      { key: 'wearing', label: '穿戴测试', icon: '🎽' }
-    ];
-
-    var kanbanHtml = '<div class="kanban-board">';
-    stages.forEach(function (stage) {
-      var stageIssues = issues.filter(function (i) { return i.stage === stage.key; });
-      var cardsHtml = '';
-      stageIssues.forEach(function (issue) {
-        cardsHtml += renderCard(issue);
-      });
-
-      kanbanHtml += '' +
-        '<div class="kanban-column stage-' + stage.key + '" data-stage="' + stage.key + '" ondragover="Dashboard.allowDrop(event)" ondrop="Dashboard.handleDrop(event)">' +
-        '  <div class="kanban-header">' +
-        '    <span class="stage-icon">' + stage.icon + '</span>' +
-        '    <span class="stage-name">' + stage.label + '</span>' +
-        '    <span class="stage-count">' + stageIssues.length + '</span>' +
-        '  </div>' +
-        '  <div class="kanban-body">' + cardsHtml + '</div>' +
-        '</div>';
-    });
-    kanbanHtml += '</div>';
-
-    viewEl.innerHTML = '' +
-      '<div class="stats-row">' + statCardsHtml + '</div>' +
-      kanbanHtml;
-
-    // 绑定拖拽事件
-    bindDragEvents();
-  }
-
-  // ========== 渲染卡片 ==========
-  function renderCard(issue) {
-    var tagsHtml = '';
-    if (issue.tags && issue.tags.length > 0) {
-      tagsHtml = '<div class="issue-card-tags">';
-      issue.tags.forEach(function (tag) {
-        tagsHtml += '<span class="card-tag">' + _escapeHtml(tag) + '</span>';
-      });
-      tagsHtml += '</div>';
-    }
-
-    // 获取设备信息
-    var device = Store.getDeviceById(issue.deviceId);
-    var deviceName = device ? device.name : '';
-    var deviceTooltip = '';
-    if (device) {
-      var statusLabel = device.status === 'normal' ? '正常' : (device.status === 'abnormal' ? '异常' : '维修中');
-      deviceTooltip = '型号: ' + (device.model || '-') + '\n位置: ' + (device.location || '-') + '\n状态: ' + statusLabel;
-    }
-
-    return '' +
-      '<div class="issue-card stage-' + _escapeHtml(issue.stage) + '" draggable="true" data-id="' + _escapeHtml(issue.id) + '">' +
-      '  <div class="issue-card-id" title="' + _escapeHtml(deviceTooltip) + '">#' + _escapeHtml(issue.deviceId) + '</div>' +
-      '  <div class="issue-card-device-name">' + _escapeHtml(deviceName) + '</div>' +
-      '  <div class="issue-card-title">' + _escapeHtml(issue.title) + '</div>' +
-      '  <div class="issue-card-meta">' +
-      '    <span class="card-assignee">' + _escapeHtml(issue.assignee || '未分配') + '</span>' +
-      '    <span class="card-time">' + _escapeHtml(_formatTime(issue.updatedAt || issue.createdAt)) + '</span>' +
-      '  </div>' +
-      '  ' + tagsHtml +
-      '</div>';
-  }
-
-  // ========== 拖拽相关 ==========
-  function bindDragEvents() {
-    var cards = document.querySelectorAll('.issue-card');
-    cards.forEach(function (card) {
-      card.addEventListener('dragstart', function (e) {
-        e.dataTransfer.setData('text/plain', card.dataset.id);
-        card.classList.add('dragging');
-      });
-      card.addEventListener('dragend', function () {
-        card.classList.remove('dragging');
+  bindEvents() {
+    document.querySelectorAll('.stat-card[data-stage]').forEach(card => {
+      card.addEventListener('click', () => this.toggleFilter(card.dataset.stage));
+      card.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          this.toggleFilter(card.dataset.stage);
+        }
       });
     });
-  }
 
-  function allowDrop(e) {
-    e.preventDefault();
-  }
+    document.querySelectorAll('.kanban-cards').forEach(column => {
+      column.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        column.closest('.kanban-column').classList.add('drag-over');
+      });
+      column.addEventListener('dragleave', (e) => {
+        if (!column.contains(e.relatedTarget)) {
+          column.closest('.kanban-column').classList.remove('drag-over');
+        }
+      });
+      column.addEventListener('drop', (e) => {
+        e.preventDefault();
+        column.closest('.kanban-column').classList.remove('drag-over');
+        const issueId = e.dataTransfer.getData('text/plain');
+        const newStage = column.dataset.stage;
+        if (issueId && newStage) {
+          this.moveIssue(issueId, newStage);
+        }
+      });
+    });
+  },
 
-  function handleDrop(e) {
-    e.preventDefault();
-    var issueId = e.dataTransfer.getData('text/plain');
-    var column = e.target.closest('.kanban-column');
-    if (!column || !issueId) return;
-
-    var newStage = column.dataset.stage;
-    Store.moveIssue(issueId, newStage);
-    render();
-  }
-
-  // ========== 筛选 ==========
-  function filterByStage(stage) {
-    var issues = Store.getIssuesByStage(stage);
-    // 简单实现：重新渲染看板，只显示该阶段的列
-    // 更优的做法是滚动到对应列或高亮
-    // 这里先滚动到对应列
-    var column = document.querySelector('.kanban-column[data-stage="' + stage + '"]');
-    if (column) {
-      column.scrollIntoView({ behavior: 'smooth', inline: 'center' });
-      column.classList.add('highlight-column');
-      setTimeout(function () {
-        column.classList.remove('highlight-column');
-      }, 1500);
+  toggleFilter(stage) {
+    if (this._filterStage === stage) {
+      this._filterStage = null;
+    } else {
+      this._filterStage = stage;
     }
-  }
+    this.updateFilterUI();
+    this.render();
+  },
 
-  // ========== HTML 转义工具 ==========
-  function _escapeHtml(str) {
-    if (!str) return '';
-    return str
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-  }
+  updateFilterUI() {
+    document.querySelectorAll('.stat-card[data-stage]').forEach(card => {
+      card.classList.toggle('active', card.dataset.stage === this._filterStage);
+    });
+  },
 
-  // ========== 格式化时间 ==========
-  function _formatTime(isoStr) {
-    if (!isoStr) return '';
-    var date = new Date(isoStr);
-    var year = date.getFullYear();
-    var month = String(date.getMonth() + 1).padStart(2, '0');
-    var day = String(date.getDate()).padStart(2, '0');
-    return year + '-' + month + '-' + day;
-  }
+  render() {
+    this.renderStats();
+    this.renderKanban();
+  },
 
-  // ========== 公开 API ==========
-  return {
-    render: render,
-    allowDrop: allowDrop,
-    handleDrop: handleDrop,
-    filterByStage: filterByStage
-  };
-})();
+  renderStats() {
+    const issues = Store.getIssues();
+    const devices = Store.getDevices();
+
+    const counts = {
+      verifying: 0,
+      detecting: 0,
+      normal: 0,
+      danger: 0,
+      wearing: 0
+    };
+    issues.forEach(i => { counts[i.stage] = (counts[i.stage] || 0) + 1; });
+
+    document.getElementById('count-verifying').textContent = counts.verifying;
+    document.getElementById('count-detecting').textContent = counts.detecting;
+    document.getElementById('count-normal').textContent = counts.normal;
+    document.getElementById('count-danger').textContent = counts.danger;
+    document.getElementById('count-wearing').textContent = counts.wearing;
+
+    document.querySelector('.summary-issues').textContent = issues.length;
+    document.querySelector('.summary-devices').textContent = devices.length;
+
+    const resolved = counts.normal + counts.wearing;
+    const rate = issues.length ? Math.round(resolved / issues.length * 100) : 0;
+    document.querySelector('.summary-rate').textContent = rate;
+
+    let totalHours = 0;
+    let timedCount = 0;
+    issues.forEach(i => {
+      if (i.createdAt && i.updatedAt) {
+        const start = new Date(i.createdAt.replace(/-/g, '/'));
+        const end = new Date(i.updatedAt.replace(/-/g, '/'));
+        const hours = (end - start) / (1000 * 60 * 60);
+        if (hours > 0) {
+          totalHours += hours;
+          timedCount++;
+        }
+      }
+    });
+    const avgHours = timedCount ? Math.round(totalHours / timedCount) : 0;
+    document.querySelector('.summary-time').textContent = avgHours + 'h';
+
+    document.getElementById('kanban-count-verifying').textContent = counts.verifying;
+    document.getElementById('kanban-count-detecting').textContent = counts.detecting;
+    document.getElementById('kanban-count-normal').textContent = counts.normal;
+    document.getElementById('kanban-count-danger').textContent = counts.danger;
+    document.getElementById('kanban-count-wearing').textContent = counts.wearing;
+  },
+
+  renderKanban() {
+    const stages = ['verifying', 'detecting', 'normal', 'danger', 'wearing'];
+    let issues = Store.getIssues();
+
+    if (this._filterStage) {
+      issues = issues.filter(i => i.stage === this._filterStage);
+    }
+
+    stages.forEach(stage => {
+      const column = document.getElementById('kanban-' + stage);
+      if (!column) return;
+
+      const stageIssues = issues.filter(i => i.stage === stage);
+
+      if (stageIssues.length === 0) {
+        column.innerHTML = `
+          <div class="kanban-empty">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <rect x="3" y="3" width="18" height="18" rx="2"/>
+              <path d="M9 12h6M12 9v6" stroke-linecap="round"/>
+            </svg>
+            <span>暂无数据</span>
+          </div>
+        `;
+        return;
+      }
+
+      column.innerHTML = stageIssues.map(issue => this.renderCard(issue)).join('');
+
+      column.querySelectorAll('.issue-card').forEach(card => {
+        card.addEventListener('dragstart', (e) => {
+          card.classList.add('dragging');
+          this._dragData = card.dataset.id;
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/plain', card.dataset.id);
+        });
+        card.addEventListener('dragend', () => {
+          card.classList.remove('dragging');
+          this._dragData = null;
+          document.querySelectorAll('.kanban-column').forEach(col => col.classList.remove('drag-over'));
+        });
+        card.addEventListener('click', () => {
+          Modal.openIssueModal(card.dataset.id);
+        });
+        card.addEventListener('keydown', (e) => {
+          const idx = STAGE_ORDER.indexOf(card.closest('.kanban-cards').dataset.stage);
+          if (e.key === 'ArrowRight' && idx < STAGE_ORDER.length - 1) {
+            e.preventDefault();
+            this.moveIssue(card.dataset.id, STAGE_ORDER[idx + 1]);
+          } else if (e.key === 'ArrowLeft' && idx > 0) {
+            e.preventDefault();
+            this.moveIssue(card.dataset.id, STAGE_ORDER[idx - 1]);
+          } else if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            Modal.openIssueModal(card.dataset.id);
+          }
+        });
+      });
+    });
+  },
+
+  renderCard(issue) {
+    const config = STAGE_CONFIG[issue.stage] || {};
+    const hasKnowledge = issue.knowledgeId && Store.getKnowledgeById(issue.knowledgeId);
+
+    const tagsHtml = (issue.tags || []).slice(0, 3).map(tag =>
+      `<span class="issue-tag">${this.escapeHtml(tag)}</span>`
+    ).join('');
+
+    return `
+      <div class="issue-card ${config.cardClass || ''}" 
+           draggable="true" 
+           data-id="${issue.id}"
+           tabindex="0"
+           role="article"
+           aria-label="${this.escapeHtml(issue.title)}">
+        ${hasKnowledge ? `
+          <div class="issue-knowledge-badge" title="已关联知识库">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 2C3.44772 2 3 2.44772 3 3V18C3 18.5523 3.44772 19 4 19H15L17 17V3C17 2.44772 16.5523 2 16 2H4Z" stroke-linejoin="round"/>
+              <path d="M7 7H13M7 11H13M7 15H10" stroke-linecap="round"/>
+            </svg>
+          </div>
+        ` : ''}
+        <div class="issue-card-header">
+          <span class="issue-id">${issue.id}</span>
+          <span class="issue-device">${this.escapeHtml(issue.device)}</span>
+        </div>
+        <div class="issue-title">${this.escapeHtml(issue.title)}</div>
+        ${tagsHtml ? `<div class="issue-tags">${tagsHtml}</div>` : ''}
+        <div class="issue-footer">
+          <div class="issue-assignee">
+            <div class="assignee-avatar">${issue.assigneeInitial || '?'}</div>
+            <span class="assignee-name">${this.escapeHtml(issue.assignee || '未分配')}</span>
+          </div>
+          <span class="issue-date">${this.formatDate(issue.updatedAt || issue.createdAt)}</span>
+        </div>
+      </div>
+    `;
+  },
+
+  moveIssue(issueId, newStage) {
+    const issue = Store.getIssueById(issueId);
+    if (!issue) return;
+
+    const oldStage = issue.stage;
+    if (oldStage === newStage) return;
+
+    Store.updateIssue(issueId, { stage: newStage });
+    Toast.show(`已移动到「${STAGE_CONFIG[newStage]?.label || newStage}」`);
+  },
+
+  escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  },
+
+  formatDate(dateStr) {
+    if (!dateStr) return '';
+    const date = new Date(dateStr.replace(/-/g, '/'));
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffMins < 60) return diffMins + '分钟前';
+    if (diffHours < 24) return diffHours + '小时前';
+    if (diffDays < 7) return diffDays + '天前';
+    return dateStr.split(' ')[0];
+  }
+};

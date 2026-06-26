@@ -1,274 +1,167 @@
-// devices.js — 设备管理视图 IIFE 模块
-const Devices = (function () {
-  'use strict';
+const Devices = {
+  _searchKeyword: '',
 
-  var activeStatus = 'all';
-  var searchKeyword = '';
+  init() {
+    this.bindEvents();
+    this.render();
+    Store.subscribe(() => this.render());
+  },
 
-  var STATUS_MAP = {
-    normal: { label: '正常', color: '#388e3c', bg: '#e8f5e9' },
-    abnormal: { label: '异常', color: '#d32f2f', bg: '#ffebee' },
-    maintenance: { label: '维修中', color: '#f57c00', bg: '#fff3e0' }
-  };
-
-  // ========== 渲染设备管理页面 ==========
-  function render() {
-    var viewEl = document.getElementById('view-devices');
-    if (!viewEl) return;
-
-    var devices = Store.getDevices();
-
-    // 按状态筛选
-    var filtered = devices;
-    if (activeStatus !== 'all') {
-      filtered = filtered.filter(function (d) { return d.status === activeStatus; });
-    }
-
-    // 按搜索关键词过滤
-    if (searchKeyword) {
-      var kw = searchKeyword.toLowerCase();
-      filtered = filtered.filter(function (d) {
-        return (d.deviceId && d.deviceId.toLowerCase().indexOf(kw) !== -1) ||
-               (d.name && d.name.toLowerCase().indexOf(kw) !== -1) ||
-               (d.model && d.model.toLowerCase().indexOf(kw) !== -1);
-      });
-    }
-
-    // 生成工具栏
-    var toolbarHtml = '' +
-      '<div class="devices-toolbar">' +
-      '  <div class="devices-search">' +
-      '    <input type="text" id="device-search-input" class="search-input" placeholder="搜索设备编号、名称、型号..." value="' + _escapeHtml(searchKeyword) + '">' +
-      '    <button class="btn btn-primary" onclick="Devices.doSearch()">搜索</button>' +
-      '  </div>' +
-      '  <div class="devices-status-filter">' +
-      '    <span class="filter-label">状态：</span>' +
-      '    <span class="status-filter-item' + (activeStatus === 'all' ? ' active' : '') + '" data-status="all" onclick="Devices.filterByStatus(\'all\')">全部</span>' +
-      '    <span class="status-filter-item' + (activeStatus === 'normal' ? ' active' : '') + '" data-status="normal" onclick="Devices.filterByStatus(\'normal\')">正常</span>' +
-      '    <span class="status-filter-item' + (activeStatus === 'abnormal' ? ' active' : '') + '" data-status="abnormal" onclick="Devices.filterByStatus(\'abnormal\')">异常</span>' +
-      '    <span class="status-filter-item' + (activeStatus === 'maintenance' ? ' active' : '') + '" data-status="maintenance" onclick="Devices.filterByStatus(\'maintenance\')">维修中</span>' +
-      '  </div>' +
-      '  <button class="btn btn-primary" onclick="Devices.openAddDevice()">+ 新增设备</button>' +
-      '</div>';
-
-    // 生成设备卡片网格
-    var gridHtml = '<div class="devices-grid">';
-    if (filtered.length === 0) {
-      gridHtml += '' +
-        '<div class="empty-state">' +
-        '  <div class="empty-icon">🔧</div>' +
-        '  <div class="empty-text">暂无匹配的设备</div>' +
-        '</div>';
-    } else {
-      filtered.forEach(function (device) {
-        gridHtml += renderDeviceCard(device);
-      });
-    }
-    gridHtml += '</div>';
-
-    viewEl.innerHTML = toolbarHtml + gridHtml;
-
-    // 绑定搜索框实时搜索
-    var searchInput = document.getElementById('device-search-input');
+  bindEvents() {
+    const searchInput = document.getElementById('device-search');
     if (searchInput) {
-      searchInput.addEventListener('input', function () {
-        searchKeyword = this.value.trim();
-        render();
+      searchInput.addEventListener('input', (e) => {
+        this._searchKeyword = e.target.value.trim();
+        this.render();
       });
     }
-  }
 
-  // ========== 渲染设备卡片 ==========
-  function renderDeviceCard(device) {
-    var statusInfo = STATUS_MAP[device.status] || STATUS_MAP.normal;
-    var issueCount = Store.getIssuesByDevice(device.deviceId).length;
-
-    return '' +
-      '<div class="device-card" data-device-id="' + _escapeHtml(device.deviceId) + '">' +
-      '  <div class="device-card-header">' +
-      '    <span class="device-id">' + _escapeHtml(device.deviceId) + '</span>' +
-      '    <span class="device-status-badge" style="background:' + statusInfo.bg + ';color:' + statusInfo.color + '">' + statusInfo.label + '</span>' +
-      '  </div>' +
-      '  <div class="device-card-name">' + _escapeHtml(device.name) + '</div>' +
-      '  <div class="device-card-meta">' +
-      '    <span class="meta-item">型号: ' + _escapeHtml(device.model || '-') + '</span>' +
-      '    <span class="meta-item">位置: ' + _escapeHtml(device.location || '-') + '</span>' +
-      '  </div>' +
-      '  <div class="device-card-footer">' +
-      '    <span class="issue-count">' + issueCount + ' 条异常</span>' +
-      '    <div class="device-actions">' +
-      '      <button class="btn btn-sm btn-outline" onclick="Devices.openEditDevice(\'' + device.deviceId.replace(/'/g, "\\'") + '\')">编辑</button>' +
-      '      <button class="btn btn-sm btn-outline" onclick="Devices.openDeviceDetail(\'' + device.deviceId.replace(/'/g, "\\'") + '\')">详情</button>' +
-      '      <button class="btn btn-sm btn-outline" onclick="Devices.deleteDevice(\'' + device.deviceId.replace(/'/g, "\\'") + '\')">删除</button>' +
-      '    </div>' +
-      '  </div>' +
-      '</div>';
-  }
-
-  // ========== 状态筛选 ==========
-  function filterByStatus(status) {
-    activeStatus = status;
-    render();
-  }
-
-  // ========== 搜索 ==========
-  function doSearch() {
-    var input = document.getElementById('device-search-input');
-    if (input) {
-      searchKeyword = input.value.trim();
+    const addBtn = document.getElementById('btn-add-device');
+    if (addBtn) {
+      addBtn.addEventListener('click', () => Modal.openDeviceModal());
     }
-    render();
-  }
+  },
 
-  // ========== 打开新增设备弹窗 ==========
-  function openAddDevice() {
-    Modal.open(null, 'device');
-  }
+  render() {
+    let devices = Store.getDevices();
 
-  // ========== 打开编辑设备弹窗 ==========
-  function openEditDevice(deviceId) {
-    var device = Store.getDeviceById(deviceId);
-    if (device) {
-      Modal.open(device, 'device');
+    if (this._searchKeyword) {
+      devices = Store.searchDevices(this._searchKeyword);
     }
-  }
 
-  // ========== 打开设备详情 ==========
-  function openDeviceDetail(deviceId) {
-    var device = Store.getDeviceById(deviceId);
+    const totalCount = Store.getDevices().length;
+    document.getElementById('device-total-count').textContent = totalCount;
+
+    const grid = document.getElementById('devices-grid');
+    if (!grid) return;
+
+    if (devices.length === 0) {
+      grid.innerHTML = `
+        <div class="devices-empty">
+          <svg class="devices-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="6" y="2" width="12" height="20" rx="2"/>
+            <path d="M12 18h.01" stroke-linecap="round"/>
+            <path d="M8 6h8" stroke-linecap="round"/>
+          </svg>
+          <div class="devices-empty-title">${this._searchKeyword ? '未找到匹配的设备' : '暂无设备'}</div>
+          <div class="devices-empty-desc">${this._searchKeyword ? '换个关键词试试' : '点击右上角新增设备开始管理'}</div>
+        </div>
+      `;
+      return;
+    }
+
+    grid.innerHTML = devices.map(device => this.renderCard(device)).join('');
+
+    grid.querySelectorAll('.device-card').forEach(card => {
+      const editBtn = card.querySelector('.device-action-btn.edit');
+      const deleteBtn = card.querySelector('.device-action-btn.danger');
+
+      if (editBtn) {
+        editBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          Modal.openDeviceModal(card.dataset.id);
+        });
+      }
+
+      if (deleteBtn) {
+        deleteBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.deleteDevice(card.dataset.id);
+        });
+      }
+    });
+  },
+
+  renderCard(device) {
+    const statusConfig = DEVICE_STATUS[device.status] || DEVICE_STATUS.active;
+    const issues = Store.getIssuesByDeviceId(device.id);
+    const activeIssues = issues.filter(i => i.stage !== 'normal' && i.stage !== 'wearing');
+
+    return `
+      <div class="device-card" data-id="${device.id}">
+        <div class="device-card-header">
+          <div class="device-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <rect x="6" y="2" width="12" height="20" rx="2"/>
+              <path d="M12 18h.01" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <span class="device-status-badge ${statusConfig.class}">${statusConfig.label}</span>
+        </div>
+        <div class="device-info">
+          <div class="device-name">${this.escapeHtml(device.name)}</div>
+          <div class="device-id">${device.id} · ${this.escapeHtml(device.model || '')}</div>
+        </div>
+        <div class="device-meta">
+          <div class="device-meta-item">
+            <span class="device-meta-label">设备类型</span>
+            <span class="device-meta-value">${this.escapeHtml(device.type || '-')}</span>
+          </div>
+          <div class="device-meta-item">
+            <span class="device-meta-label">出厂时间</span>
+            <span class="device-meta-value">${device.manufactureDate || '-'}</span>
+          </div>
+          <div class="device-meta-item">
+            <span class="device-meta-label">异常总数</span>
+            <span class="device-meta-value">${issues.length} 条</span>
+          </div>
+          <div class="device-meta-item">
+            <span class="device-meta-label">处理中</span>
+            <span class="device-meta-value" style="color: ${activeIssues.length ? 'var(--stage-danger)' : 'inherit'}">${activeIssues.length} 条</span>
+          </div>
+        </div>
+        ${device.note ? `
+          <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-light);">
+            <div class="device-meta-label" style="margin-bottom: 4px;">备注</div>
+            <div style="font-size: 13px; color: var(--text-secondary); line-height: 1.5;">${this.escapeHtml(device.note)}</div>
+          </div>
+        ` : ''}
+        <div class="device-actions">
+          <button class="device-action-btn edit">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M13.5 2.5L17.5 6.5L6 18H2V14L13.5 2.5Z" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            编辑
+          </button>
+          <button class="device-action-btn danger">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M4 6H16M8 6V4C8 3.44772 8.44772 3 9 3H11C11.5523 3 12 3.44772 12 4V6M6 6L7 17C7 17.5523 7.44772 18 8 18H12C12.5523 18 13 17.5523 13 17L14 6" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            删除
+          </button>
+        </div>
+      </div>
+    `;
+  },
+
+  deleteDevice(id) {
+    const device = Store.getDeviceById(id);
     if (!device) return;
 
-    var issues = Store.getIssuesByDevice(deviceId);
-    var statusInfo = STATUS_MAP[device.status] || STATUS_MAP.normal;
-
-    var issuesHtml = '';
-    if (issues.length === 0) {
-      issuesHtml = '<div class="detail-no-issues">暂无异常记录</div>';
-    } else {
-      issuesHtml = '<div class="detail-issues-list">';
-      issues.sort(function (a, b) {
-        return new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt);
-      });
-      issues.forEach(function (issue) {
-        var stageLabel = '';
-        switch (issue.stage) {
-          case 'verifying': stageLabel = '数据校对'; break;
-          case 'detecting': stageLabel = '检测中'; break;
-          case 'normal': stageLabel = '判定正常'; break;
-          case 'danger': stageLabel = '判定危险'; break;
-          case 'wearing': stageLabel = '穿戴测试'; break;
-          default: stageLabel = issue.stage;
-        }
-        issuesHtml += '' +
-          '<div class="detail-issue-item" onclick="Devices.goToIssue(\'' + issue.id.replace(/'/g, "\\'") + '\')">' +
-          '  <span class="issue-stage stage-' + issue.stage + '">' + stageLabel + '</span>' +
-          '  <span class="issue-title">' + _escapeHtml(issue.title) + '</span>' +
-          '  <span class="issue-assignee">' + _escapeHtml(issue.assignee || '未分配') + '</span>' +
-          '  <span class="issue-time">' + _escapeHtml(_formatTime(issue.updatedAt || issue.createdAt)) + '</span>' +
-          '</div>';
-      });
-      issuesHtml += '</div>';
+    const issues = Store.getIssuesByDeviceId(id);
+    let message = `确定要删除设备「${device.name}」吗？`;
+    if (issues.length > 0) {
+      message += `\n\n该设备关联了 ${issues.length} 条异常记录，删除后这些记录的设备信息将被清空。`;
     }
 
-    var html = '' +
-      '<div class="modal-header">' +
-      '  <h3>设备详情</h3>' +
-      '  <button class="modal-close" onclick="Modal.close()">&times;</button>' +
-      '</div>' +
-      '<div class="modal-body">' +
-      '  <div class="device-detail-info">' +
-      '    <div class="detail-row"><span class="detail-label">设备编号</span><span class="detail-value">' + _escapeHtml(device.deviceId) + '</span></div>' +
-      '    <div class="detail-row"><span class="detail-label">设备名称</span><span class="detail-value">' + _escapeHtml(device.name) + '</span></div>' +
-      '    <div class="detail-row"><span class="detail-label">型号</span><span class="detail-value">' + _escapeHtml(device.model || '-') + '</span></div>' +
-      '    <div class="detail-row"><span class="detail-label">位置</span><span class="detail-value">' + _escapeHtml(device.location || '-') + '</span></div>' +
-      '    <div class="detail-row"><span class="detail-label">状态</span><span class="detail-value"><span class="device-status-badge" style="background:' + statusInfo.bg + ';color:' + statusInfo.color + '">' + statusInfo.label + '</span></span></div>' +
-      '    <div class="detail-row"><span class="detail-label">创建时间</span><span class="detail-value">' + _escapeHtml(_formatTime(device.createdAt)) + '</span></div>' +
-      '  </div>' +
-      '  <h4 class="detail-section-title">异常历史 (' + issues.length + ')</h4>' +
-      '  ' + issuesHtml +
-      '</div>' +
-      '<div class="modal-footer">' +
-      '  <button class="btn btn-primary" onclick="Devices.addIssueForDevice(\'' + device.deviceId.replace(/'/g, "\\'") + '\')">为此设备新增异常</button>' +
-      '  <button class="btn btn-outline" onclick="Modal.close()">关闭</button>' +
-      '</div>';
-
-    var container = document.getElementById('modal-container');
-    var overlay = document.getElementById('modal-overlay');
-    container.innerHTML = html;
-    overlay.style.display = 'flex';
-    requestAnimationFrame(function () {
-      overlay.classList.add('show');
-    });
-  }
-
-  // ========== 删除设备 ==========
-  function deleteDevice(deviceId) {
-    var result = Store.deleteDevice(deviceId);
-    if (result.success) {
-      render();
-    } else {
-      alert(result.message);
-    }
-  }
-
-  // ========== 跳转到异常 ==========
-  function goToIssue(issueId) {
-    Modal.close();
-    location.hash = 'dashboard';
-    // 高亮异常卡片
-    setTimeout(function () {
-      var card = document.querySelector('.issue-card[data-id="' + issueId + '"]');
-      if (card) {
-        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        card.style.animation = 'highlight-pulse 1.5s ease';
-        setTimeout(function () {
-          card.style.animation = '';
-        }, 1500);
+    Dialog.confirm({
+      title: '删除设备',
+      message: message,
+      type: 'danger',
+      confirmText: '确认删除',
+      onConfirm: () => {
+        issues.forEach(issue => {
+          Store.updateIssue(issue.id, { device: '', deviceId: null });
+        });
+        Store.deleteDevice(id);
+        Toast.show('设备已删除', 'success');
       }
-    }, 300);
-  }
+    });
+  },
 
-  // ========== 为此设备新增异常 ==========
-  function addIssueForDevice(deviceId) {
-    Modal.close();
-    setTimeout(function () {
-      Modal.openForDevice(deviceId);
-    }, 300);
+  escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
   }
-
-  // ========== HTML 转义工具 ==========
-  function _escapeHtml(str) {
-    if (!str) return '';
-    return str
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-  }
-
-  // ========== 格式化时间 ==========
-  function _formatTime(isoStr) {
-    if (!isoStr) return '';
-    var date = new Date(isoStr);
-    var year = date.getFullYear();
-    var month = String(date.getMonth() + 1).padStart(2, '0');
-    var day = String(date.getDate()).padStart(2, '0');
-    var hour = String(date.getHours()).padStart(2, '0');
-    var min = String(date.getMinutes()).padStart(2, '0');
-    return year + '-' + month + '-' + day + ' ' + hour + ':' + min;
-  }
-
-  // ========== 公开 API ==========
-  return {
-    render: render,
-    filterByStatus: filterByStatus,
-    doSearch: doSearch,
-    openAddDevice: openAddDevice,
-    openEditDevice: openEditDevice,
-    openDeviceDetail: openDeviceDetail,
-    deleteDevice: deleteDevice,
-    goToIssue: goToIssue,
-    addIssueForDevice: addIssueForDevice
-  };
-})();
+};
