@@ -1,126 +1,163 @@
-const Dialog = {
-  confirm({ title = '确认', message = '', type = 'warning', confirmText = '确定', cancelText = '取消', onConfirm, onCancel }) {
-    const modal = document.createElement('div');
-    modal.className = 'modal-overlay confirm-dialog show';
-    modal.innerHTML = `
-      <div class="modal animate-scale-in">
-        <div class="modal-body" style="text-align: center; padding: 32px 24px;">
-          <div class="confirm-dialog-icon ${type}">
-            ${type === 'danger' ? '⚠' : type === 'success' ? '✓' : type === 'info' ? 'ℹ' : '?'}
-          </div>
-          <div class="confirm-dialog-title">${this.escapeHtml(title)}</div>
-          <div class="confirm-dialog-message" style="white-space: pre-line;">${this.escapeHtml(message)}</div>
-        </div>
-        <div class="modal-footer" style="justify-content: center; gap: 12px;">
-          <button class="btn btn-ghost" data-action="cancel" style="min-width: 100px;">${this.escapeHtml(cancelText)}</button>
-          <button class="btn ${type === 'danger' ? 'btn-primary' : 'btn-primary'}" data-action="confirm" style="min-width: 100px; ${type === 'danger' ? 'background: var(--stage-danger);' : ''}">${this.escapeHtml(confirmText)}</button>
-        </div>
-      </div>
-    `;
+/**
+ * 自定义对话框工具
+ * 替代原生 confirm() / prompt()
+ * 原生对话框在 VS Code / TRAE IDE 的 webview 中不被支持，会导致 React error #185
+ */
+const Dialog = (function() {
+    let overlay = null;
+    let lastFocusedElement = null;
 
-    document.body.appendChild(modal);
+    /**
+     * 确认对话框
+     * @param {string|object} options - 消息字符串或 { title, message, confirmText, cancelText, danger }
+     * @returns {Promise<boolean>} true=确认, false=取消
+     */
+    function confirm(options) {
+        const opts = typeof options === 'string' ? { message: options } : options;
+        return new Promise((resolve) => {
+            _show({
+                title: opts.title || '确认操作',
+                message: opts.message,
+                confirmText: opts.confirmText || '确定',
+                cancelText: opts.cancelText || '取消',
+                danger: opts.danger === true,
+                type: 'confirm',
+                resolve
+            });
+        });
+    }
 
-    const close = (action) => {
-      modal.classList.remove('show');
-      setTimeout(() => modal.remove(), 200);
-      if (action === 'confirm' && onConfirm) onConfirm();
-      if (action === 'cancel' && onCancel) onCancel();
-    };
+    /**
+     * 输入对话框
+     * @param {string|object} options - 消息字符串或 { title, message, defaultValue, placeholder, confirmText }
+     * @returns {Promise<string|null>} 输入值或 null（取消）
+     */
+    function prompt(options) {
+        const opts = typeof options === 'string' ? { message: options } : options;
+        return new Promise((resolve) => {
+            _show({
+                title: opts.title || '请输入',
+                message: opts.message || '',
+                defaultValue: opts.defaultValue || '',
+                placeholder: opts.placeholder || '',
+                confirmText: opts.confirmText || '确定',
+                cancelText: opts.cancelText || '取消',
+                danger: false,
+                type: 'prompt',
+                resolve
+            });
+        });
+    }
 
-    modal.querySelector('[data-action="cancel"]').addEventListener('click', () => close('cancel'));
-    modal.querySelector('[data-action="confirm"]').addEventListener('click', () => close('confirm'));
+    function _show(config) {
+        _createOverlay();
+        lastFocusedElement = document.activeElement;
 
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) close('cancel');
-    });
+        const isPrompt = config.type === 'prompt';
+        const confirmClass = config.danger
+            ? 'dialog-btn dialog-btn-confirm dialog-btn-danger'
+            : 'dialog-btn dialog-btn-confirm';
 
-    const keyHandler = (e) => {
-      if (e.key === 'Escape') {
-        close('cancel');
-        document.removeEventListener('keydown', keyHandler);
-      } else if (e.key === 'Enter') {
-        close('confirm');
-        document.removeEventListener('keydown', keyHandler);
-      }
-    };
-    document.addEventListener('keydown', keyHandler);
+        overlay.innerHTML = `
+            <div class="dialog-box" role="dialog" aria-modal="true" aria-labelledby="dialog-title-text" aria-describedby="dialog-message-text">
+                <div class="dialog-title" id="dialog-title-text">${_escapeHtml(config.title)}</div>
+                ${config.message ? `<div class="dialog-message" id="dialog-message-text">${_escapeHtml(config.message).replace(/\n/g, '<br>')}</div>` : ''}
+                ${isPrompt ? `
+                    <input class="dialog-input" id="dialog-input-field"
+                           type="text"
+                           value="${_escapeHtml(config.defaultValue)}"
+                           placeholder="${_escapeHtml(config.placeholder)}"
+                           autocomplete="off"
+                           aria-label="${_escapeHtml(config.title)}" />
+                ` : ''}
+                <div class="dialog-actions">
+                    <button class="dialog-btn dialog-btn-cancel" id="dialog-btn-cancel">${_escapeHtml(config.cancelText)}</button>
+                    <button class="${confirmClass}" id="dialog-btn-confirm">${_escapeHtml(config.confirmText)}</button>
+                </div>
+            </div>
+        `;
 
-    modal.querySelector('[data-action="confirm"]').focus();
-  },
+        overlay.classList.add('active');
+        document.body.style.overflow = 'hidden';
 
-  prompt({ title = '输入', message = '', placeholder = '', defaultValue = '', confirmText = '确定', cancelText = '取消', onConfirm, onCancel }) {
-    const modal = document.createElement('div');
-    modal.className = 'modal-overlay show';
-    modal.innerHTML = `
-      <div class="modal animate-scale-in" style="max-width: 420px;">
-        <div class="modal-header">
-          <h3 class="modal-title">${this.escapeHtml(title)}</h3>
-        </div>
-        <div class="modal-body">
-          ${message ? `<p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">${this.escapeHtml(message)}</p>` : ''}
-          <input type="text" class="form-input" id="prompt-input" placeholder="${this.escapeHtml(placeholder)}" value="${this.escapeHtml(defaultValue)}">
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-ghost" data-action="cancel">${this.escapeHtml(cancelText)}</button>
-          <button class="btn btn-primary" data-action="confirm">${this.escapeHtml(confirmText)}</button>
-        </div>
-      </div>
-    `;
+        const cancelBtn = document.getElementById('dialog-btn-cancel');
+        const confirmBtn = document.getElementById('dialog-btn-confirm');
+        const inputField = document.getElementById('dialog-input-field');
 
-    document.body.appendChild(modal);
+        function cleanup() {
+            overlay.classList.remove('active');
+            document.body.style.overflow = '';
+            overlay.innerHTML = '';
+            document.removeEventListener('keydown', handleKeydown);
+            if (lastFocusedElement && typeof lastFocusedElement.focus === 'function') {
+                setTimeout(() => {
+                    try { lastFocusedElement.focus(); } catch (e) {}
+                }, 50);
+            }
+        }
 
-    const input = modal.querySelector('#prompt-input');
-    setTimeout(() => {
-      input.focus();
-      input.select();
-    }, 100);
+        function handleConfirm() {
+            cleanup();
+            if (isPrompt) {
+                config.resolve(inputField ? inputField.value : '');
+            } else {
+                config.resolve(true);
+            }
+        }
 
-    const close = (action) => {
-      modal.classList.remove('show');
-      const value = input.value;
-      setTimeout(() => modal.remove(), 200);
-      if (action === 'confirm' && onConfirm) onConfirm(value);
-      if (action === 'cancel' && onCancel) onCancel?.();
-    };
+        function handleCancel() {
+            cleanup();
+            config.resolve(isPrompt ? null : false);
+        }
 
-    modal.querySelector('[data-action="cancel"]').addEventListener('click', () => close('cancel'));
-    modal.querySelector('[data-action="confirm"]').addEventListener('click', () => close('confirm'));
+        function handleKeydown(e) {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                handleCancel();
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                handleConfirm();
+            }
+        }
 
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) close('cancel');
-    });
+        if (cancelBtn) cancelBtn.addEventListener('click', handleCancel);
+        if (confirmBtn) confirmBtn.addEventListener('click', handleConfirm);
 
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        close('confirm');
-      } else if (e.key === 'Escape') {
-        close('cancel');
-      }
-    });
-  },
+        // 点击遮罩取消
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                handleCancel();
+            }
+        });
 
-  escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
-};
+        document.addEventListener('keydown', handleKeydown);
 
-const Toast = {
-  _timer: null,
+        // 聚焦
+        setTimeout(() => {
+            if (isPrompt && inputField) {
+                inputField.focus();
+                inputField.select();
+            } else if (confirmBtn) {
+                confirmBtn.focus();
+            }
+        }, 50);
+    }
 
-  show(message, type = '', duration = 2500) {
-    const toast = document.getElementById('toast');
-    if (!toast) return;
+    function _createOverlay() {
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.id = 'dialog-overlay';
+            overlay.className = 'dialog-overlay';
+            document.body.appendChild(overlay);
+        }
+    }
 
-    toast.textContent = message;
-    toast.className = 'toast show ' + type;
+    function _escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = String(text);
+        return div.innerHTML;
+    }
 
-    if (this._timer) clearTimeout(this._timer);
-    this._timer = setTimeout(() => {
-      toast.classList.remove('show');
-      this._timer = null;
-    }, duration);
-  }
-};
+    return { confirm, prompt };
+})();

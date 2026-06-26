@@ -1,26 +1,15 @@
 // AI 智能诊疗模块
-// 基于火山方舟大模型 API 实现异常自动归类、标签推荐和方案智能匹配
-// 文档参考: https://www.volcengine.com/docs/82379/1330310
+// 基于大模型 API 实现异常自动归类、标签推荐和方案智能匹配
 const AIDoctor = (function() {
     const API_KEY_STORAGE = 'device-doctor-ai-key';
-    const MODEL_STORAGE = 'device-doctor-ai-model';
     const API_BASE = 'https://ark.cn-beijing.volces.com/api/v3';
-
-    // 可选模型列表（参考火山方舟模型列表页）
-    // https://www.volcengine.com/docs/82379/1330310
-    const MODELS = [
-        { id: 'doubao-seed-2-0-pro-260215',  label: 'Doubao-Seed-2.0-Pro（推荐，旗舰稳定版）' },
-        { id: 'doubao-seed-2-0-mini-260428', label: 'Doubao-Seed-2.0-Mini（轻量快速版）' },
-        { id: 'doubao-seed-2-0-lite-260428', label: 'Doubao-Seed-2.0-Lite（超轻量版）' },
-    ];
-    const DEFAULT_MODEL = MODELS[0].id;
+    const MODEL = 'doubao-1-5-pro-32k-250115';
 
     let lastRequest = null;
 
     function getConfig() {
         const apiKey = localStorage.getItem(API_KEY_STORAGE);
-        const model = localStorage.getItem(MODEL_STORAGE) || DEFAULT_MODEL;
-        return { apiKey, model, enabled: !!apiKey };
+        return { apiKey, enabled: !!apiKey };
     }
 
     function setApiKey(key) {
@@ -31,31 +20,19 @@ const AIDoctor = (function() {
         }
     }
 
-    function setModel(model) {
-        if (model) {
-            localStorage.setItem(MODEL_STORAGE, model);
-        } else {
-            localStorage.removeItem(MODEL_STORAGE);
-        }
-    }
-
-    function getModels() {
-        return MODELS;
-    }
-
     function isConfigured() {
         return !!localStorage.getItem(API_KEY_STORAGE);
     }
 
     // 统一调用大模型对话接口
     async function chat(messages, options = {}) {
-        const { apiKey, model } = getConfig();
+        const { apiKey } = getConfig();
         if (!apiKey) {
             throw new Error('未配置 API Key，请先在设置中配置');
         }
 
         const body = {
-            model: model,
+            model: MODEL,
             messages,
             temperature: options.temperature ?? 0.3,
             max_tokens: options.max_tokens ?? 800
@@ -178,8 +155,6 @@ const AIDoctor = (function() {
         generateSolution,
         ask,
         setApiKey,
-        setModel,
-        getModels,
         isConfigured,
         getConfig
     };
