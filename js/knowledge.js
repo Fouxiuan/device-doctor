@@ -7,6 +7,9 @@ const Knowledge = (function() {
     // 编辑模式下的文档属性草稿
     let editTags = [];
     let editCategoryId = null;
+    // 标签折叠/展开状态：默认折叠（仅显示前 12 个）
+    const TAG_COLLAPSED_LIMIT = 12;
+    let tagsExpanded = false;
 
     function init() {
         bindEvents();
@@ -58,17 +61,38 @@ const Knowledge = (function() {
         if (!tagList) return;
 
         const allTags = Store.getTags();
-        
+
         if (allTags.length === 0) {
             tagList.innerHTML = '<span style="color: var(--text-tertiary); font-size: 12px;">暂无标签</span>';
             return;
         }
 
-        tagList.innerHTML = allTags.map(tag => `
-            <button class="kb-filter-tag ${activeTags.includes(tag) ? 'active' : ''}" data-tag="${escapeHtml(tag)}">
+        // 当标签数量超过阈值时启用折叠/展开
+        // 特殊规则：若 activeTags 中包含被折叠隐藏的标签，则自动展开以确保用户可见已选状态
+        const canCollapse = allTags.length > TAG_COLLAPSED_LIMIT;
+        const hiddenTags = canCollapse ? allTags.slice(TAG_COLLAPSED_LIMIT) : [];
+        const hasActiveHiddenTag = hiddenTags.some(t => activeTags.includes(t));
+        const expanded = tagsExpanded || hasActiveHiddenTag || !canCollapse;
+
+        const visibleTags = expanded ? allTags : allTags.slice(0, TAG_COLLAPSED_LIMIT);
+
+        let html = visibleTags.map(tag => `
+            <button class="kb-filter-tag ${activeTags.includes(tag) ? 'active' : ''}" data-tag="${escapeHtml(tag)}" aria-pressed="${activeTags.includes(tag) ? 'true' : 'false'}">
                 ${escapeHtml(tag)}
             </button>
         `).join('');
+
+        if (canCollapse) {
+            const hiddenCount = allTags.length - TAG_COLLAPSED_LIMIT;
+            const toggleLabel = expanded ? '收起标签' : `展开全部（${hiddenCount} 个）`;
+            html += `
+                <button class="kb-filter-tag-toggle" data-action="toggle-tags" aria-expanded="${expanded ? 'true' : 'false'}" aria-controls="tag-list">
+                    ${escapeHtml(toggleLabel)}
+                </button>
+            `;
+        }
+
+        tagList.innerHTML = html;
 
         tagList.querySelectorAll('.kb-filter-tag').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -76,6 +100,14 @@ const Knowledge = (function() {
                 toggleTag(tag);
             });
         });
+
+        const toggleBtn = tagList.querySelector('[data-action="toggle-tags"]');
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', () => {
+                tagsExpanded = !tagsExpanded;
+                renderTags();
+            });
+        }
     }
 
     function renderSidebar() {
@@ -122,7 +154,7 @@ const Knowledge = (function() {
             const expanded = cat.expanded !== false;
             
             html += `
-                <div class="kb-category" data-cat-id="${cat.id}">
+                <div class="kbcategory" data-cat-id="${cat.id}">
                     <div class="kb-category-header" tabindex="0" role="button" aria-expanded="${expanded ? 'true' : 'false'}" aria-label="分类 ${escapeHtml(cat.name)}，${expanded ? '已展开，点击折叠' : '已折叠，点击展开'}">
                         <span class="kb-category-toggle" aria-hidden="true">
                             <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="${expanded ? 'rotated' : ''}">
@@ -863,8 +895,10 @@ const Knowledge = (function() {
     function clearFilters() {
         searchQuery = '';
         activeTags = [];
+        tagsExpanded = false;
         const searchInput = document.getElementById('knowledge-search');
         if (searchInput) searchInput.value = '';
+        renderTags();
         renderSidebar();
     }
 
