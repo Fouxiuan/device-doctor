@@ -5,8 +5,8 @@ const Modal = (function() {
     let selectedKnowledgeId = null;
 
     function showToast(message, type = 'info') {
-        if (window.App && typeof window.App.showToast === 'function') {
-            window.App.showToast(message, type);
+        if (typeof App !== 'undefined' && typeof App.showToast === 'function') {
+            App.showToast(message, type);
         }
     }
 
@@ -301,17 +301,22 @@ const Modal = (function() {
         const area = document.getElementById('ai-diagnosis-area');
         if (!btn || !area) return;
 
+        // 1. 优先检查 AI 配置：未配置则提示并引导打开设置（无论是否填写内容）
+        if (typeof AIDoctor === 'undefined' || !AIDoctor.isConfigured()) {
+            showToast('未配置 AI API Key，正在打开设置…', 'info');
+            if (typeof App !== 'undefined' && typeof App.openAISettings === 'function') {
+                App.openAISettings();
+            }
+            return;
+        }
+
+        // 2. 再检查内容
         const title = document.getElementById('form-title')?.value.trim() || '';
         const description = document.getElementById('form-description')?.value.trim() || '';
         const deviceId = document.getElementById('form-device')?.value.trim() || '';
 
         if (!title && !description) {
             showToast('请先填写异常标题或描述', 'error');
-            return;
-        }
-
-        if (typeof AIDoctor === 'undefined' || !AIDoctor.isConfigured()) {
-            showToast('请先在右上角设置中配置 AI API Key', 'error');
             return;
         }
 
