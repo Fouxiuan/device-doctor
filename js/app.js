@@ -75,6 +75,18 @@ const App = (function() {
                 </div>
                 <div class="modal-body">
                     <div class="form-group">
+                        <label class="form-label" for="ai-model-select">豆包模型</label>
+                        <select class="form-input" id="ai-model-select" name="ai-model-select">
+                        </select>
+                        <div id="ai-model-custom-wrap" style="display:none; margin-top:8px;">
+                            <input type="text" class="form-input" id="ai-model-custom"
+                                   placeholder="输入模型 id 或接入点 ep-xxx"
+                                   aria-label="自定义模型 id 或接入点"
+                                   name="ai-model-custom" autocomplete="off">
+                        </div>
+                        <div class="form-hint">选择最新豆包 Seed 系列模型；选「自定义」可输入接入点 id</div>
+                    </div>
+                    <div class="form-group">
                         <label class="form-label" for="ai-api-key">豆包 API Key</label>
                         <input type="password" class="form-input" id="ai-api-key"
                                placeholder="sk-..."
@@ -90,6 +102,7 @@ const App = (function() {
                     </div>
                 </div>
                 <div class="modal-footer">
+                    <button class="btn btn-ghost" id="ai-replay-tour">重新观看引导</button>
                     ${configured ? '<button class="btn btn-secondary" id="ai-clear-key">清除配置</button>' : ''}
                     <button class="btn btn-secondary" id="ai-cancel">取消</button>
                     <button class="btn btn-primary" id="ai-save">保存配置</button>
@@ -104,7 +117,40 @@ const App = (function() {
         const cancelBtn = modal.querySelector('#ai-cancel');
         const saveBtn = modal.querySelector('#ai-save');
         const clearBtn = modal.querySelector('#ai-clear-key');
+        const replayBtn = modal.querySelector('#ai-replay-tour');
         const input = modal.querySelector('#ai-api-key');
+        const modelSelect = modal.querySelector('#ai-model-select');
+        const modelCustomWrap = modal.querySelector('#ai-model-custom-wrap');
+        const modelCustomInput = modal.querySelector('#ai-model-custom');
+
+        // 填充模型下拉：预设 + 自定义选项
+        if (modelSelect && typeof AIDoctor !== 'undefined' && Array.isArray(AIDoctor.PRESET_MODELS)) {
+            modelSelect.innerHTML = AIDoctor.PRESET_MODELS.map(m =>
+                `<option value="${m.id}">${m.label} — ${m.desc}</option>`
+            ).join('') + '<option value="__custom__">自定义…</option>';
+
+            // 初始化选中：命中预设则选之，否则选「自定义」并回填
+            const cur = AIDoctor.getSelectedModel();
+            const isPreset = AIDoctor.PRESET_MODELS.some(m => m.id === cur);
+            if (isPreset) {
+                modelSelect.value = cur;
+            } else {
+                modelSelect.value = '__custom__';
+                modelCustomWrap.style.display = '';
+                modelCustomInput.value = cur;
+            }
+        }
+
+        if (modelSelect) {
+            modelSelect.addEventListener('change', () => {
+                if (modelSelect.value === '__custom__') {
+                    modelCustomWrap.style.display = '';
+                    setTimeout(() => modelCustomInput && modelCustomInput.focus(), 50);
+                } else {
+                    modelCustomWrap.style.display = 'none';
+                }
+            });
+        }
 
         const closeModal = () => {
             modal.remove();
@@ -119,9 +165,18 @@ const App = (function() {
 
         if (saveBtn) {
             saveBtn.addEventListener('click', () => {
+                // 模型始终保存（独立于 API Key）
+                let model = '';
+                if (modelSelect) {
+                    model = modelSelect.value === '__custom__'
+                        ? (modelCustomInput ? modelCustomInput.value.trim() : '')
+                        : modelSelect.value;
+                }
+                AIDoctor.setModel(model);
+
                 const key = input.value.trim();
                 if (!key) {
-                    showToast('请输入 API Key', 'error');
+                    showToast('模型已保存，请继续填写 API Key 以启用 AI', 'info');
                     return;
                 }
                 AIDoctor.setApiKey(key);
@@ -135,6 +190,18 @@ const App = (function() {
                 AIDoctor.setApiKey('');
                 showToast('已清除 AI 配置，将使用规则引擎', 'info');
                 closeModal();
+            });
+        }
+
+        if (replayBtn) {
+            replayBtn.addEventListener('click', () => {
+                closeModal();
+                localStorage.removeItem('hasSeenTour');
+                setTimeout(() => {
+                    if (window.Tour && typeof window.Tour.start === 'function') {
+                        window.Tour.start();
+                    }
+                }, 200);
             });
         }
 
@@ -263,13 +330,32 @@ const App = (function() {
     return {
         init,
         switchPage,
-        showToast
+        showToast,
+        openAISettings
     };
 })();
 
 (function() {
-    // Tour functionality
+    // Tour 新手指引功能
+    // 定位由 tour-utils.js 的 computeTooltipPosition 纯函数计算（已单测覆盖）
     let tourStepIndex = 0;
+
+    const steps = [
+        { element: '.nav-tab[data-page="dashboard"]', page: 'dashboard',
+          title: '状态看板', desc: '实时追踪设备异常处理进度，拖拽卡片可更改状态', position: 'bottom' },
+        { element: '#btn-add-issue', page: 'dashboard',
+          title: '新增异常', desc: '点击此处快速创建设备异常记录，可启用 AI 自动归类', position: 'bottom' },
+        { element: '#btn-ai-settings', page: 'dashboard',
+          title: 'AI 诊疗设置', desc: '配置豆包 API Key 与模型，启用智能诊断、方案生成、问答', position: 'bottom' },
+        { element: '.nav-tab[data-page="devices"]', page: 'devices',
+          title: '设备管理', desc: '管理所有设备资产信息，支持搜索与标签筛选', position: 'bottom' },
+        { element: '#btn-add-device', page: 'devices',
+          title: '新增设备', desc: '添加新设备型号，填写类型与标签便于归类', position: 'bottom' },
+        { element: '.nav-tab[data-page="knowledge"]', page: 'knowledge',
+          title: '知识库', desc: '查看与管理设备维修方案，按分类与标签组织文档', position: 'bottom' },
+        { element: '#btn-import', page: 'knowledge',
+          title: '导入数据', desc: '支持导入 JSON 格式的设备与异常数据，也可导出备份', position: 'bottom' }
+    ];
 
     function initTour() {
         const hasSeenTour = localStorage.getItem('hasSeenTour');
@@ -286,47 +372,22 @@ const App = (function() {
     }
 
     function showTourStep() {
-        const steps = [
-            {
-                element: '.nav-tab[data-page="dashboard"]',
-                title: '状态看板',
-                desc: '实时追踪设备异常处理进度，拖拽卡片可更改状态',
-                position: 'bottom'
-            },
-            {
-                element: '#btn-add-issue',
-                title: '新增异常',
-                desc: '点击此处快速创建设备异常记录',
-                position: 'left'
-            },
-            {
-                element: '.nav-tab[data-page="devices"]',
-                title: '设备管理',
-                desc: '管理所有设备信息，支持搜索和筛选',
-                position: 'bottom'
-            },
-            {
-                element: '.nav-tab[data-page="knowledge"]',
-                title: '知识库',
-                desc: '查看和管理设备维修方案文档',
-                position: 'bottom'
-            },
-            {
-                element: '#btn-import',
-                title: '导入数据',
-                desc: '支持导入JSON格式的设备和异常数据',
-                position: 'left'
-            }
-        ];
-
         if (tourStepIndex >= steps.length) {
             endTour();
             return;
         }
-
         const step = steps[tourStepIndex];
-        const element = document.querySelector(step.element);
 
+        // 1. 切页（若步骤指定页面，确保目标元素可见）
+        if (step.page && typeof App !== 'undefined' && typeof App.switchPage === 'function') {
+            App.switchPage(step.page);
+        }
+
+        // 2. 清除上一步残留高亮
+        document.querySelectorAll('.tour-highlight').forEach(el => el.classList.remove('tour-highlight'));
+
+        // 3. 查元素；找不到则跳下一步
+        const element = document.querySelector(step.element);
         if (!element) {
             tourStepIndex++;
             showTourStep();
@@ -342,56 +403,49 @@ const App = (function() {
         const nextBtn = document.getElementById('tour-next');
         const skipBtn = document.getElementById('tour-skip');
 
+        // 4. 更新文案与按钮
         title.textContent = step.title;
         desc.textContent = step.desc;
-
         prevBtn.style.display = tourStepIndex === 0 ? 'none' : '';
         nextBtn.textContent = tourStepIndex === steps.length - 1 ? '完成' : '下一步';
 
-        const rect = element.getBoundingClientRect();
-        const tooltipRect = tooltip.getBoundingClientRect();
+        // 5. 高亮目标
+        element.classList.add('tour-highlight');
+
+        // 6. 滚动到可见区域
+        element.scrollIntoView({ block: 'center', behavior: 'smooth' });
+
+        // 7. 双 rAF 等布局稳定后定位 tooltip
         const isMobile = window.innerWidth <= 480;
-
-        arrow.className = 'tour-arrow';
-
-        if (isMobile) {
-            // 移动端：固定在屏幕中央
-            tooltip.style.top = '50%';
-            tooltip.style.left = '50%';
-            tooltip.style.right = 'auto';
-            tooltip.style.bottom = 'auto';
-            tooltip.style.transform = 'translate(-50%, -50%)';
-        } else {
-            // 桌面端：根据位置显示
-            tooltip.style.transform = '';
-            tooltip.style.right = 'auto';
-            tooltip.style.bottom = 'auto';
-            
-            switch (step.position) {
-                case 'bottom':
-                    tooltip.style.top = `${rect.bottom + 12}px`;
-                    tooltip.style.left = `${rect.left + rect.width / 2 - tooltipRect.width / 2}px`;
-                    arrow.classList.add('top');
-                    break;
-                case 'top':
-                    tooltip.style.bottom = `${window.innerHeight - rect.top + 12}px`;
-                    tooltip.style.left = `${rect.left + rect.width / 2 - tooltipRect.width / 2}px`;
-                    arrow.classList.add('bottom');
-                    break;
-                case 'left':
-                    tooltip.style.left = `${rect.right + 12}px`;
-                    tooltip.style.top = `${rect.top + rect.height / 2 - tooltipRect.height / 2}px`;
-                    arrow.classList.add('left');
-                    break;
-                case 'right':
-                    tooltip.style.right = `${window.innerWidth - rect.left + 12}px`;
-                    tooltip.style.top = `${rect.top + rect.height / 2 - tooltipRect.height / 2}px`;
-                    arrow.classList.add('right');
-                    break;
-            }
-        }
-
-        overlay.style.display = 'block';
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                if (isMobile) {
+                    // 移动端：固定在屏幕中央
+                    tooltip.style.top = '50%';
+                    tooltip.style.left = '50%';
+                    tooltip.style.right = 'auto';
+                    tooltip.style.bottom = 'auto';
+                    tooltip.style.transform = 'translate(-50%, -50%)';
+                } else if (typeof computeTooltipPosition === 'function') {
+                    const rect = element.getBoundingClientRect();
+                    const tRect = tooltip.getBoundingClientRect();
+                    const pos = computeTooltipPosition(
+                        { top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right, width: rect.width, height: rect.height },
+                        { width: tRect.width, height: tRect.height },
+                        { w: window.innerWidth, h: window.innerHeight },
+                        step.position || 'bottom'
+                    );
+                    tooltip.style.transform = '';
+                    tooltip.style.right = 'auto';
+                    tooltip.style.bottom = 'auto';
+                    tooltip.style.top = pos.top + 'px';
+                    tooltip.style.left = pos.left + 'px';
+                    arrow.className = 'tour-arrow';
+                    if (pos.arrow !== 'none') arrow.classList.add(pos.arrow);
+                }
+                overlay.style.display = 'block';
+            });
+        });
 
         prevBtn.onclick = () => {
             tourStepIndex--;
@@ -409,9 +463,13 @@ const App = (function() {
     function endTour() {
         const overlay = document.getElementById('tour-overlay');
         overlay.style.display = 'none';
+        document.querySelectorAll('.tour-highlight').forEach(el => el.classList.remove('tour-highlight'));
         localStorage.setItem('hasSeenTour', 'true');
     }
 
-    // Initialize tour on load
+    // 暴露给外部（AI 设置弹窗「重新观看引导」按钮调用）
+    window.Tour = { start: startTour };
+
+    // 页面加载后自动初始化
     initTour();
 })();

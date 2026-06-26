@@ -2,14 +2,43 @@
 // 基于大模型 API 实现异常自动归类、标签推荐和方案智能匹配
 const AIDoctor = (function() {
     const API_KEY_STORAGE = 'device-doctor-ai-key';
+    const MODEL_STORAGE = 'device-doctor-ai-model';
     const API_BASE = 'https://ark.cn-beijing.volces.com/api/v3';
-    const MODEL = 'doubao-1-5-pro-32k-250115';
+    // 默认模型：最新豆包 Seed 2.1 Turbo（官方称效果比肩 Pro，成本低，适合异常诊断场景）
+    const DEFAULT_MODEL = 'doubao-seed-2-1-turbo-260628';
+
+    // 预设模型列表（最新豆包 Seed 系列，排除旧版 1.5）
+    // model id 以火山引擎方舟平台为准，用户可在设置中选择「自定义」输入 ep-xxx 或任意 id
+    const PRESET_MODELS = [
+        { id: 'doubao-seed-2-1-pro-260628', label: 'Seed 2.1 Pro', desc: '最新旗舰深度思考，复杂任务' },
+        { id: 'doubao-seed-2-1-turbo-260628', label: 'Seed 2.1 Turbo', desc: '性价比，效果比肩 Pro（默认）' },
+        { id: 'doubao-seed-evolving', label: 'Seed Evolving', desc: '动态迭代，始终最新' },
+        { id: 'doubao-seed-2.0-pro', label: 'Seed 2.0 Pro', desc: '旗舰多模态' },
+        { id: 'doubao-seed-2.0-lite', label: 'Seed 2.0 Lite', desc: '均衡' },
+        { id: 'doubao-seed-2.0-mini', label: 'Seed 2.0 Mini', desc: '低成本高吞吐' },
+        { id: 'doubao-seed-1.8', label: 'Seed 1.8', desc: '通用 Agent' },
+        { id: 'doubao-seed-1.6', label: 'Seed 1.6', desc: '自适应思考' },
+        { id: 'doubao-seed-1.6-flash', label: 'Seed 1.6 Flash', desc: '最便宜' }
+    ];
 
     let lastRequest = null;
 
+    function getSelectedModel() {
+        const m = localStorage.getItem(MODEL_STORAGE);
+        return (m && m.trim()) ? m : DEFAULT_MODEL;
+    }
+
+    function setModel(model) {
+        if (model && model.trim()) {
+            localStorage.setItem(MODEL_STORAGE, model.trim());
+        } else {
+            localStorage.removeItem(MODEL_STORAGE);
+        }
+    }
+
     function getConfig() {
         const apiKey = localStorage.getItem(API_KEY_STORAGE);
-        return { apiKey, enabled: !!apiKey };
+        return { apiKey, model: getSelectedModel(), enabled: !!apiKey };
     }
 
     function setApiKey(key) {
@@ -32,7 +61,7 @@ const AIDoctor = (function() {
         }
 
         const body = {
-            model: MODEL,
+            model: getSelectedModel(),
             messages,
             temperature: options.temperature ?? 0.3,
             max_tokens: options.max_tokens ?? 800
@@ -156,6 +185,10 @@ const AIDoctor = (function() {
         ask,
         setApiKey,
         isConfigured,
-        getConfig
+        getConfig,
+        getSelectedModel,
+        setModel,
+        PRESET_MODELS,
+        DEFAULT_MODEL
     };
 })();
