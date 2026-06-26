@@ -1,572 +1,721 @@
-const Knowledge = {
-  _currentDocId: null,
-  _searchKeyword: '',
-  _selectedTags: [],
-  _expandedCategories: new Set(),
-  _isEditing: false,
-  _editContent: '',
-  _allTags: [],
+const Knowledge = (function() {
+    let searchQuery = '';
+    let activeTags = [];
+    let currentDocId = null;
+    let editMode = false;
+    let editDraft = '';
 
-  init() {
-    this.bindEvents();
-    Store.getCategories().forEach(cat => this._expandedCategories.add(cat.id));
-    this.render();
-    Store.subscribe(() => this.render());
-  },
-
-  bindEvents() {
-    const searchInput = document.getElementById('knowledge-search');
-    if (searchInput) {
-      searchInput.addEventListener('input', (e) => {
-        this._searchKeyword = e.target.value.trim();
-        this.renderSidebar();
-      });
+    function init() {
+        bindEvents();
     }
 
-    const addCatBtn = document.getElementById('btn-add-category');
-    if (addCatBtn) {
-      addCatBtn.addEventListener('click', () => this.addCategory());
+    function render() {
+        renderTags();
+        renderSidebar();
+        renderContent();
     }
 
-    const addDocBtn = document.getElementById('btn-add-doc');
-    if (addDocBtn) {
-      addDocBtn.addEventListener('click', () => this.newDocument());
-    }
-
-    const toggleEditBtn = document.getElementById('kb-toggle-edit');
-    if (toggleEditBtn) {
-      toggleEditBtn.addEventListener('click', () => this.toggleEdit());
-    }
-  },
-
-  render() {
-    this.renderSidebar();
-    this.renderContent();
-  },
-
-  renderSidebar() {
-    this._allTags = Store.getAllTags();
-    this.renderTagList();
-    this.renderCategories();
-  },
-
-  renderTagList() {
-    const tagList = document.getElementById('tag-list');
-    if (!tagList) return;
-
-    if (this._allTags.length === 0) {
-      tagList.innerHTML = '<span style="font-size: 11px; color: var(--text-tertiary);">暂无标签</span>';
-      return;
-    }
-
-    tagList.innerHTML = this._allTags.slice(0, 10).map(tag => `
-      <span class="kb-sidebar-tag-chip ${this._selectedTags.includes(tag) ? 'active' : ''}" data-tag="${this.escapeHtml(tag)}">${this.escapeHtml(tag)}</span>
-    `).join('');
-
-    tagList.querySelectorAll('.kb-sidebar-tag-chip').forEach(chip => {
-      chip.addEventListener('click', () => {
-        const tag = chip.dataset.tag;
-        if (this._selectedTags.includes(tag)) {
-          this._selectedTags = this._selectedTags.filter(t => t !== tag);
-        } else {
-          this._selectedTags.push(tag);
+    function bindEvents() {
+        const searchInput = document.getElementById('knowledge-search');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                searchQuery = e.target.value.trim().toLowerCase();
+                renderSidebar();
+            });
         }
-        this.renderCategories();
-        this.renderTagList();
-      });
-    });
-  },
 
-  renderCategories() {
-    const container = document.getElementById('kb-categories');
-    if (!container) return;
-
-    const categories = Store.getCategories();
-    const allKnowledge = this.getFilteredKnowledge();
-
-    if (categories.length === 0) {
-      container.innerHTML = `
-        <div style="padding: 24px 16px; text-align: center; color: var(--text-tertiary); font-size: 13px;">
-          暂无分类，点击上方 + 新建
-        </div>
-      `;
-      return;
-    }
-
-    container.innerHTML = categories.map(cat => {
-      const docs = allKnowledge.filter(k => k.categoryId === cat.id);
-      const isExpanded = this._expandedCategories.has(cat.id);
-
-      return `
-        <div class="kb-category-group" data-id="${cat.id}">
-          <div class="kb-category-header" data-id="${cat.id}">
-            <svg class="kb-category-toggle ${isExpanded ? 'expanded' : ''}" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M7 5L13 10L7 15" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            <svg class="kb-category-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
-              <path d="M3 5C3 4.44772 3.44772 4 4 4H8L10 6H16C16.5523 6 17 6.44772 17 7V15C17 15.5523 16.5523 16 16 16H4C3.44772 16 3 15.5523 3 15V5Z" stroke-linejoin="round"/>
-            </svg>
-            <span class="kb-category-name">${this.escapeHtml(cat.name)}</span>
-            <span class="kb-category-count">${docs.length}</span>
-            <div class="kb-category-actions">
-              <button class="kb-cat-action-btn" data-action="rename" title="重命名">
-                <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5">
-                  <path d="M8.5 1.5L10.5 3.5L4.5 9.5L2.5 9.5L2.5 7.5L8.5 1.5Z" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </button>
-              <button class="kb-cat-action-btn danger" data-action="delete" title="删除">
-                <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5">
-                  <path d="M2.5 3.5H9.5M5 3.5V2.5C5 2.22386 5.22386 2 5.5 2H6.5C6.77614 2 7 2.22386 7 2.5V3.5M3.5 3.5L4 10C4 10.2761 4.22386 10.5 4.5 10.5H7.5C7.77614 10.5 8 10.2761 8 10L8.5 3.5" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </button>
-            </div>
-          </div>
-          ${isExpanded ? `
-            <div class="kb-doc-list">
-              ${docs.length === 0 ? `
-                <div style="padding: 8px 12px 8px 34px; font-size: 12px; color: var(--text-tertiary);">暂无文档</div>
-              ` : docs.map(doc => `
-                <div class="kb-doc-list-item ${this._currentDocId === doc.id ? 'active' : ''}" data-id="${doc.id}">
-                  <svg class="kb-doc-list-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
-                    <path d="M3 2H10L13 5V14C13 14.5523 12.5523 15 12 15H3C2.44772 15 2 14.5523 2 14V2C2 1.44772 2.44772 1 3 1Z" stroke-linejoin="round"/>
-                    <path d="M10 2V5H13" stroke-linejoin="round"/>
-                  </svg>
-                  <span class="kb-doc-list-title">${this.escapeHtml(doc.title)}</span>
-                </div>
-              `).join('')}
-            </div>
-          ` : ''}
-        </div>
-      `;
-    }).join('');
-
-    container.querySelectorAll('.kb-category-header').forEach(header => {
-      header.addEventListener('click', (e) => {
-        if (e.target.closest('.kb-category-actions')) return;
-        const catId = header.dataset.id;
-        if (this._expandedCategories.has(catId)) {
-          this._expandedCategories.delete(catId);
-        } else {
-          this._expandedCategories.add(catId);
+        const addCategoryBtn = document.getElementById('btn-add-category');
+        if (addCategoryBtn) {
+            addCategoryBtn.addEventListener('click', handleAddCategory);
         }
-        this.renderCategories();
-      });
-    });
 
-    container.querySelectorAll('.kb-cat-action-btn[data-action="rename"]').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const catId = btn.closest('.kb-category-group').dataset.id;
-        this.renameCategory(catId);
-      });
-    });
-
-    container.querySelectorAll('.kb-cat-action-btn[data-action="delete"]').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const catId = btn.closest('.kb-category-group').dataset.id;
-        this.deleteCategory(catId);
-      });
-    });
-
-    container.querySelectorAll('.kb-doc-list-item').forEach(item => {
-      item.addEventListener('click', () => {
-        this.selectDocument(item.dataset.id);
-      });
-    });
-  },
-
-  getFilteredKnowledge() {
-    let docs = Store.getKnowledge();
-
-    if (this._searchKeyword) {
-      docs = Store.searchKnowledge(this._searchKeyword);
-    }
-
-    if (this._selectedTags.length > 0) {
-      docs = docs.filter(doc =>
-        this._selectedTags.every(tag => (doc.tags || []).includes(tag))
-      );
-    }
-
-    return docs;
-  },
-
-  renderContent() {
-    const body = document.getElementById('kb-doc-body');
-    const title = document.getElementById('kb-doc-title');
-    const meta = document.getElementById('kb-doc-meta');
-    const toggleBtn = document.getElementById('kb-toggle-edit');
-
-    if (!this._currentDocId) {
-      if (title) title.textContent = '选择一篇文档开始阅读';
-      if (meta) meta.innerHTML = '';
-      if (toggleBtn) toggleBtn.style.display = 'none';
-      if (body) {
-        body.innerHTML = `
-          <div class="kb-doc-empty">
-            <svg class="kb-doc-empty-icon" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.5">
-              <path d="M12 8h32l12 12v36H12z" rx="3"/>
-              <path d="M44 8v12h12"/>
-              <path d="M20 28h24M20 36h20M20 44h16" stroke-linecap="round"/>
-            </svg>
-            <div class="kb-doc-empty-title">从左侧选择一篇文档</div>
-            <div class="kb-doc-empty-desc">或点击右上角「新建文档」开始创作</div>
-          </div>
-        `;
-      }
-      return;
-    }
-
-    const doc = Store.getKnowledgeById(this._currentDocId);
-    if (!doc) {
-      this._currentDocId = null;
-      this.renderContent();
-      return;
-    }
-
-    if (title) title.textContent = doc.title;
-    if (toggleBtn) {
-      toggleBtn.style.display = 'inline-flex';
-      toggleBtn.innerHTML = this._isEditing
-        ? '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 12L10 6L16 12" stroke-linecap="round" stroke-linejoin="round"/></svg> 预览'
-        : '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 16V18H6L14.5 9.5L12.5 7.5L4 16Z"/><path d="M14 5.5L16 3.5L18 5.5L16 7.5L14 5.5Z"/></svg> 编辑';
-    }
-
-    if (meta) {
-      const category = Store.getCategories().find(c => c.id === doc.categoryId);
-      const relatedDevices = (doc.deviceIds || []).map(id => Store.getDeviceById(id)).filter(Boolean);
-
-      meta.innerHTML = `
-        ${category ? `<span class="kb-meta-item">📁 ${this.escapeHtml(category.name)}</span>` : ''}
-        ${doc.updatedAt ? `<span class="kb-meta-item">📝 更新于 ${doc.updatedAt}</span>` : ''}
-        ${doc.createdAt ? `<span class="kb-meta-item">📅 创建于 ${doc.createdAt}</span>` : ''}
-        ${relatedDevices.length ? `<span class="kb-meta-item">📱 关联 ${relatedDevices.length} 台设备</span>` : ''}
-      `;
-    }
-
-    if (body) {
-      if (this._isEditing) {
-        this.renderEditor(body, doc);
-      } else {
-        body.innerHTML = `<div class="kb-markdown">${this.renderMarkdown(doc.content || '')}</div>`;
-      }
-    }
-  },
-
-  renderEditor(body, doc) {
-    body.innerHTML = `
-      <div class="kb-editor-container">
-        <div class="kb-editor-toolbar">
-          <button class="kb-editor-btn" data-action="bold" title="粗体">**B**</button>
-          <button class="kb-editor-btn" data-action="italic" title="斜体">*I*</button>
-          <button class="kb-editor-btn" data-action="heading" title="标题"># H</button>
-          <button class="kb-editor-btn" data-action="link" title="链接">🔗</button>
-          <button class="kb-editor-btn" data-action="code" title="代码">
-            <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
-              <path d="M7 15L2 10L7 5M13 5L18 10L13 15" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </button>
-          <button class="kb-editor-btn" data-action="list" title="列表">
-            <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
-              <path d="M5 6H17M5 10H17M5 14H17M2 6h.01M2 10h.01M2 14h.01" stroke-linecap="round"/>
-            </svg>
-          </button>
-          <button class="kb-editor-btn" data-action="quote" title="引用">
-            <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
-              <path d="M7 4H4C3.44772 4 3 4.44772 3 5V8C3 8.55228 3.44772 9 4 9H5V16H8V9H7V4ZM17 4H14C13.4477 4 13 4.44772 13 5V8C13 8.55228 13.4477 9 14 9H15V16H18V9H17V4Z"/>
-            </svg>
-          </button>
-          <span style="flex: 1;"></span>
-          <button class="kb-editor-btn" id="kb-save-edit" style="color: var(--primary); font-weight: 600;">保存</button>
-          <button class="kb-editor-btn" id="kb-cancel-edit" style="color: var(--stage-danger);">取消</button>
-        </div>
-        <div class="kb-editor-main">
-          <textarea class="kb-editor-textarea" id="kb-edit-textarea" spellcheck="false">${this.escapeHtml(this._editContent)}</textarea>
-          <div class="kb-editor-preview" id="kb-edit-preview"></div>
-        </div>
-      </div>
-    `;
-
-    const textarea = document.getElementById('kb-edit-textarea');
-    const preview = document.getElementById('kb-edit-preview');
-
-    if (textarea && preview) {
-      preview.innerHTML = this.renderMarkdown(this._editContent);
-
-      textarea.addEventListener('input', () => {
-        this._editContent = textarea.value;
-        preview.innerHTML = this.renderMarkdown(this._editContent);
-      });
-
-      textarea.focus();
-      textarea.setSelectionRange(textarea.value.length, textarea.value.length);
-    }
-
-    document.getElementById('kb-save-edit')?.addEventListener('click', () => {
-      this.saveEdit();
-    });
-
-    document.getElementById('kb-cancel-edit')?.addEventListener('click', () => {
-      this.cancelEdit();
-    });
-
-    body.querySelectorAll('.kb-editor-btn[data-action]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        this.insertMarkdown(btn.dataset.action);
-      });
-    });
-  },
-
-  insertMarkdown(action) {
-    const textarea = document.getElementById('kb-edit-textarea');
-    if (!textarea) return;
-
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const selected = textarea.value.substring(start, end);
-    let prefix = '';
-    let suffix = '';
-    let newSelectionStart = start;
-    let newSelectionEnd = end;
-
-    switch (action) {
-      case 'bold':
-        prefix = '**';
-        suffix = '**';
-        break;
-      case 'italic':
-        prefix = '*';
-        suffix = '*';
-        break;
-      case 'heading':
-        prefix = '\n## ';
-        suffix = '';
-        break;
-      case 'link':
-        prefix = '[';
-        suffix = '](url)';
-        break;
-      case 'code':
-        prefix = '`';
-        suffix = '`';
-        break;
-      case 'list':
-        prefix = '\n- ';
-        suffix = '';
-        break;
-      case 'quote':
-        prefix = '\n> ';
-        suffix = '';
-        break;
-    }
-
-    const newValue = textarea.value.substring(0, start) + prefix + selected + suffix + textarea.value.substring(end);
-    textarea.value = newValue;
-    this._editContent = newValue;
-
-    newSelectionStart = start + prefix.length;
-    newSelectionEnd = start + prefix.length + selected.length;
-
-    textarea.setSelectionRange(newSelectionStart, newSelectionEnd);
-    textarea.focus();
-
-    document.getElementById('kb-edit-preview').innerHTML = this.renderMarkdown(newValue);
-  },
-
-  renderMarkdown(text) {
-    if (!text) return '<p style="color: var(--text-tertiary);">暂无内容</p>';
-
-    let html = text
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
-
-    html = html.replace(/```([\s\S]*?)```/g, (match, code) => {
-      return `<pre><code>${code.trim()}</code></pre>`;
-    });
-
-    html = html.replace(/^### (.*$)/gm, '<h3>$1</h3>');
-    html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
-    html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
-
-    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-    html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
-    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-
-    html = html.replace(/^\|(.+)\|$/gm, (match) => {
-      const cells = match.split('|').filter(Boolean);
-      const isHeader = cells.every(c => /^[-:]+$/.test(c.trim()));
-      if (isHeader) return '';
-      return '<tr>' + cells.map(c => `<td>${c.trim()}</td>`).join('') + '</tr>';
-    });
-    html = html.replace(/(<tr>.*<\/tr>\n?)+/g, match => {
-      if (match.includes('<td>')) {
-        return `<table>${match.replace(/^\n/, '')}</table>\n`;
-      }
-      return match;
-    });
-
-    html = html.replace(/^> (.*$)/gm, '<blockquote>$1</blockquote>');
-
-    html = html.replace(/^- (.*$)/gm, '<li>$1</li>');
-    html = html.replace(/^\d+\. (.*$)/gm, '<li>$1</li>');
-
-    html = html.replace(/(<li>.*<\/li>\n?)+/g, match => {
-      if (match.includes('<li>')) {
-        return `<ul>${match.replace(/^\n/, '')}</ul>\n`;
-      }
-      return match;
-    });
-
-    html = html.replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
-
-    html = html.replace(/\n{3,}/g, '<br><br>');
-    html = html.replace(/\n/g, '<br>');
-
-    return html;
-  },
-
-  selectDocument(id) {
-    this._currentDocId = id;
-    this._isEditing = false;
-    const doc = Store.getKnowledgeById(id);
-    if (doc) this._editContent = doc.content || '';
-    this.render();
-  },
-
-  newDocument() {
-    const categories = Store.getCategories();
-    if (categories.length === 0) {
-      Toast.show('请先创建一个分类');
-      return;
-    }
-
-    Dialog.prompt({
-      title: '新建文档',
-      message: '请输入文档标题：',
-      placeholder: '输入文档标题...',
-      confirmText: '创建',
-      onConfirm: (title) => {
-        if (!title || !title.trim()) {
-          Toast.show('请输入标题');
-          return;
+        const addDocBtn = document.getElementById('btn-add-doc');
+        if (addDocBtn) {
+            addDocBtn.addEventListener('click', () => handleAddDocument());
         }
-        const newDoc = Store.addKnowledge({
-          title: title.trim(),
-          categoryId: categories[0].id,
-          content: '## 概述\n\n在这里编写文档内容...',
-          tags: [],
-          deviceIds: []
+
+        const toggleEditBtn = document.getElementById('kb-toggle-edit');
+        if (toggleEditBtn) {
+            toggleEditBtn.addEventListener('click', toggleEditMode);
+        }
+
+        // Ctrl+S / Cmd+S 快捷键保存文档
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                if (editMode && currentDocId) {
+                    e.preventDefault();
+                    saveDocument();
+                }
+            }
         });
-        this._expandedCategories.add(categories[0].id);
-        this._currentDocId = newDoc.id;
-        this._editContent = newDoc.content;
-        this._isEditing = true;
-        this.render();
-        Toast.show('文档已创建', 'success');
-      }
-    });
-  },
-
-  toggleEdit() {
-    if (!this._currentDocId) return;
-
-    if (this._isEditing) {
-      this.saveEdit();
-    } else {
-      const doc = Store.getKnowledgeById(this._currentDocId);
-      this._editContent = doc.content || '';
-      this._isEditing = true;
-      this.renderContent();
-    }
-  },
-
-  saveEdit() {
-    if (!this._currentDocId) return;
-
-    const doc = Store.getKnowledgeById(this._currentDocId);
-    if (!doc) return;
-
-    Store.updateKnowledge(this._currentDocId, { content: this._editContent });
-    this._isEditing = false;
-    this.render();
-    Toast.show('保存成功', 'success');
-  },
-
-  cancelEdit() {
-    this._isEditing = false;
-    const doc = Store.getKnowledgeById(this._currentDocId);
-    if (doc) this._editContent = doc.content || '';
-    this.renderContent();
-  },
-
-  addCategory() {
-    Dialog.prompt({
-      title: '新增大类',
-      message: '请输入分类名称：',
-      placeholder: '例如：健康监测',
-      confirmText: '添加',
-      onConfirm: (name) => {
-        if (!name || !name.trim()) {
-          Toast.show('请输入名称');
-          return;
-        }
-        const cat = Store.addCategory({ name: name.trim(), icon: 'folder' });
-        this._expandedCategories.add(cat.id);
-        this.renderSidebar();
-        Toast.show('分类已添加', 'success');
-      }
-    });
-  },
-
-  renameCategory(id) {
-    const cat = Store.getCategories().find(c => c.id === id);
-    if (!cat) return;
-
-    Dialog.prompt({
-      title: '重命名分类',
-      message: '请输入新的分类名称：',
-      defaultValue: cat.name,
-      placeholder: '输入名称...',
-      confirmText: '保存',
-      onConfirm: (name) => {
-        if (!name || !name.trim()) {
-          Toast.show('名称不能为空');
-          return;
-        }
-        Store.updateCategory(id, { name: name.trim() });
-        Toast.show('已重命名', 'success');
-      }
-    });
-  },
-
-  deleteCategory(id) {
-    const cat = Store.getCategories().find(c => c.id === id);
-    if (!cat) return;
-
-    const docs = Store.getKnowledgeByCategory(id);
-    let message = `确定要删除分类「${cat.name}」吗？`;
-    if (docs.length > 0) {
-      message += `\n\n该分类下有 ${docs.length} 篇文档，删除后这些文档将变为未分类。`;
     }
 
-    Dialog.confirm({
-      title: '删除分类',
-      message: message,
-      type: 'danger',
-      confirmText: '确认删除',
-      onConfirm: () => {
-        Store.deleteCategory(id);
-        this._expandedCategories.delete(id);
-        Toast.show('分类已删除', 'success');
-      }
-    });
-  },
+    function renderTags() {
+        const tagList = document.getElementById('tag-list');
+        if (!tagList) return;
 
-  escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
-};
+        const allTags = Store.getTags();
+        
+        if (allTags.length === 0) {
+            tagList.innerHTML = '<span style="color: var(--text-tertiary); font-size: 12px;">暂无标签</span>';
+            return;
+        }
+
+        tagList.innerHTML = allTags.map(tag => `
+            <button class="kb-filter-tag ${activeTags.includes(tag) ? 'active' : ''}" data-tag="${escapeHtml(tag)}">
+                ${escapeHtml(tag)}
+            </button>
+        `).join('');
+
+        tagList.querySelectorAll('.kb-filter-tag').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tag = btn.dataset.tag;
+                toggleTag(tag);
+            });
+        });
+    }
+
+    function renderSidebar() {
+        const container = document.getElementById('kb-categories');
+        if (!container) return;
+
+        const categories = Store.getKnowledgeCategories();
+        const allDocs = Store.getKnowledge();
+        const docMap = new Map(allDocs.map(d => [d.id, d]));
+
+        let filteredDocIds = new Set();
+        if (searchQuery || activeTags.length > 0) {
+            allDocs.forEach(doc => {
+                let match = true;
+                if (searchQuery) {
+                    const titleMatch = doc.title && doc.title.toLowerCase().includes(searchQuery);
+                    const tagMatch = doc.tags && doc.tags.some(t => t.toLowerCase().includes(searchQuery));
+                    const contentMatch = doc.content && doc.content.toLowerCase().includes(searchQuery);
+                    const deviceMatch = doc.relatedDevices && doc.relatedDevices.some(d => d.toLowerCase().includes(searchQuery));
+                    match = titleMatch || tagMatch || contentMatch || deviceMatch;
+                }
+                if (match && activeTags.length > 0) {
+                    match = doc.tags && activeTags.every(tag => doc.tags.includes(tag));
+                }
+                if (match) {
+                    filteredDocIds.add(doc.id);
+                }
+            });
+        }
+
+        let html = '';
+        categories.forEach(cat => {
+            const visibleDocs = (cat.documents || []).filter(docId => {
+                if (searchQuery || activeTags.length > 0) {
+                    return filteredDocIds.has(docId);
+                }
+                return true;
+            });
+
+            if ((searchQuery || activeTags.length > 0) && visibleDocs.length === 0) {
+                return;
+            }
+
+            const expanded = cat.expanded !== false;
+            
+            html += `
+                <div class="kb-category" data-cat-id="${cat.id}">
+                    <div class="kb-category-header" tabindex="0" role="button" aria-expanded="${expanded ? 'true' : 'false'}" aria-label="分类 ${escapeHtml(cat.name)}，${expanded ? '已展开，点击折叠' : '已折叠，点击展开'}">
+                        <span class="kb-category-toggle" aria-hidden="true">
+                            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="${expanded ? 'rotated' : ''}">
+                                <path d="M6 8L10 12L14 8"/>
+                            </svg>
+                        </span>
+                        <span class="kb-category-name">${escapeHtml(cat.name)}</span>
+                        <span class="kb-category-count">${visibleDocs.length}</span>
+                        <div class="kb-category-actions">
+                            <button class="kb-cat-action" data-action="add-doc" title="添加文档" aria-label="为分类 ${escapeHtml(cat.name)} 添加文档">
+                                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                                    <path d="M10 4V16M4 10H16" stroke-linecap="round"/>
+                                </svg>
+                            </button>
+                            <button class="kb-cat-action" data-action="rename" title="重命名" aria-label="重命名分类 ${escapeHtml(cat.name)}">
+                                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                                    <path d="M4 16V18H6L14.5 9.5L12.5 7.5L4 16Z"/>
+                                    <path d="M14 5.5L16 3.5L18 5.5L16 7.5L14 5.5Z"/>
+                                </svg>
+                            </button>
+                            <button class="kb-cat-action danger" data-action="delete" title="删除分类" aria-label="删除分类 ${escapeHtml(cat.name)}">
+                                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                                    <path d="M3 6h14M8 6V4h4v2M6 6l1 10h6l1-10" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="kb-doc-list ${expanded ? '' : 'collapsed'}" data-cat-docs="${cat.id}">
+                        ${visibleDocs.map(docId => {
+                            const doc = docMap.get(docId);
+                            if (!doc) return '';
+                            const active = doc.id === currentDocId;
+                            return `
+                                <div class="kb-doc-item ${active ? 'active' : ''}" data-doc-id="${doc.id}" data-cat-id="${cat.id}" role="button" tabindex="0" aria-label="文档 ${escapeHtml(doc.title)}${active ? '（当前选中）' : ''}">
+                                    <svg class="kb-doc-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                                        <path d="M6 2h7l4 4v12H6z" stroke-linejoin="round"/>
+                                        <path d="M13 2v4h4" stroke-linejoin="round"/>
+                                        <path d="M9 10h6M9 14h4" stroke-linecap="round"/>
+                                    </svg>
+                                    <span class="kb-doc-name">${escapeHtml(doc.title)}</span>
+                                    <div class="kb-doc-item-actions">
+                                        <button class="kb-doc-del" data-doc-action="delete" title="删除文档" aria-label="删除文档 ${escapeHtml(doc.title)}">&times;</button>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+        });
+
+        if (!html) {
+            html = `<div class="kb-sidebar-empty">
+                <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" style="width: 48px; height: 48px; margin-bottom: 12px; opacity: 0.4;">
+                    <path d="M8 8h32v32H8z" rx="3"/>
+                    <path d="M14 16h20M14 24h20M14 32h12" stroke-linecap="round"/>
+                </svg>
+                <div style="font-size: 13px; color: var(--text-tertiary);">${searchQuery || activeTags.length > 0 ? '未找到匹配文档' : '暂无分类'}</div>
+            </div>`;
+        }
+
+        container.innerHTML = html;
+        bindSidebarEvents(container);
+    }
+
+    function bindSidebarEvents(container) {
+        container.querySelectorAll('.kb-category-header').forEach(header => {
+            const catId = header.parentElement.dataset.catId;
+
+            // 整个分类栏点击展开/折叠
+            // 操作按钮（添加文档/重命名/删除）已 stopPropagation，不会触发此处
+            header.addEventListener('click', () => {
+                toggleCategory(catId);
+            });
+
+            // 键盘支持：在分类栏上按 Enter/空格切换展开
+            header.addEventListener('keydown', (e) => {
+                if (e.target.closest('.kb-cat-action')) return;
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    toggleCategory(catId);
+                }
+            });
+
+            header.querySelector('[data-action="add-doc"]')?.addEventListener('click', (e) => {
+                e.stopPropagation();
+                handleAddDocument(catId);
+            });
+
+            header.querySelector('[data-action="rename"]')?.addEventListener('click', (e) => {
+                e.stopPropagation();
+                handleRenameCategory(catId);
+            });
+
+            header.querySelector('[data-action="delete"]')?.addEventListener('click', (e) => {
+                e.stopPropagation();
+                handleDeleteCategory(catId);
+            });
+        });
+
+        container.querySelectorAll('.kb-doc-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                if (e.target.closest('[data-doc-action]')) return;
+                const docId = item.dataset.docId;
+                selectDocument(docId);
+            });
+            item.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    if (e.target.closest('[data-doc-action]')) return;
+                    const docId = item.dataset.docId;
+                    selectDocument(docId);
+                }
+            });
+
+            item.querySelector('[data-doc-action="delete"]')?.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const docId = item.dataset.docId;
+                handleDeleteDocument(docId);
+            });
+        });
+    }
+
+    function renderContent() {
+        const titleEl = document.getElementById('kb-doc-title');
+        const metaEl = document.getElementById('kb-doc-meta');
+        const bodyEl = document.getElementById('kb-doc-body');
+        const toggleBtn = document.getElementById('kb-toggle-edit');
+
+        if (!currentDocId) {
+            if (titleEl) titleEl.textContent = '选择一篇文档开始阅读';
+            if (metaEl) metaEl.innerHTML = '';
+            if (toggleBtn) toggleBtn.style.display = 'none';
+            if (bodyEl) {
+                bodyEl.innerHTML = `
+                    <div class="kb-doc-empty">
+                        <svg class="kb-doc-empty-icon" width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M12 8h32l12 12v36H12z" rx="3"/>
+                            <path d="M44 8v12h12"/>
+                            <path d="M20 28h24M20 36h20M20 44h16" stroke-linecap="round"/>
+                        </svg>
+                        <div class="kb-doc-empty-title">从左侧选择一篇文档</div>
+                        <div class="kb-doc-empty-desc">或点击右上角「新建文档」开始创作</div>
+                    </div>
+                `;
+            }
+            return;
+        }
+
+        const doc = Store.getKnowledgeById(currentDocId);
+        if (!doc) {
+            currentDocId = null;
+            renderContent();
+            return;
+        }
+
+        if (toggleBtn) {
+            toggleBtn.style.display = '';
+            toggleBtn.innerHTML = editMode ? `
+                <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                    <path d="M4 12l4 4 8-8"/>
+                </svg>
+                保存
+            ` : `
+                <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                    <path d="M4 16V18H6L14.5 9.5L12.5 7.5L4 16Z"/>
+                    <path d="M14 5.5L16 3.5L18 5.5L16 7.5L14 5.5Z"/>
+                </svg>
+                编辑
+            `;
+        }
+
+        // 编辑模式下显示"取消"按钮，非编辑模式隐藏
+        const actionsEl = document.querySelector('.kb-content-actions');
+        let cancelBtn = document.getElementById('kb-cancel-edit');
+        if (editMode && !cancelBtn && actionsEl) {
+            cancelBtn = document.createElement('button');
+            cancelBtn.className = 'btn btn-ghost kb-cancel-edit';
+            cancelBtn.id = 'kb-cancel-edit';
+            cancelBtn.innerHTML = `
+                <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                    <path d="M4 4L16 16M16 4L4 16" stroke-linecap="round"/>
+                </svg>
+                取消
+            `;
+            cancelBtn.addEventListener('click', cancelEdit);
+            actionsEl.insertBefore(cancelBtn, toggleBtn);
+        } else if (!editMode && cancelBtn) {
+            cancelBtn.remove();
+        }
+
+        if (titleEl) {
+            titleEl.textContent = doc.title || '无标题文档';
+        }
+
+        if (metaEl) {
+            const tagsHtml = doc.tags && doc.tags.length > 0
+                ? doc.tags.map(t => `<span class="kb-meta-tag">${escapeHtml(t)}</span>`).join('')
+                : '';
+            const author = doc.author || '未知作者';
+            const date = doc.createdAt || doc.updatedAt || '';
+            metaEl.innerHTML = `
+                <span class="kb-meta-item">
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                        <circle cx="8" cy="5.5" r="3"/>
+                        <path d="M2.5 14c.8-2.6 3-4 5.5-4s4.7 1.4 5.5 4" stroke-linecap="round"/>
+                    </svg>
+                    ${escapeHtml(author)}
+                </span>
+                ${date ? `<span class="kb-meta-item">${formatDate(date)}</span>` : ''}
+                <span class="kb-meta-item">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="overflow: visible;" aria-hidden="true">
+                        <path d="M9 12l2 2 4-4"/>
+                        <circle cx="12" cy="12" r="10"/>
+                    </svg>
+                    ${doc.solveCount || 0} 次解决
+                </span>
+                <span class="kb-meta-item">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="overflow: visible;" aria-hidden="true">
+                        <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+                    </svg>
+                    ${doc.likes || 0}
+                </span>
+                <div class="kb-meta-tags">${tagsHtml}</div>
+            `;
+        }
+
+        if (bodyEl) {
+            if (editMode) {
+                bodyEl.innerHTML = `
+                    <div class="kb-editor-wrap">
+                        <div class="kb-editor-pane">
+                            <div class="kb-editor-pane-label">编辑</div>
+                            <textarea class="kb-editor" id="kb-editor-textarea"
+                                      placeholder="支持 Markdown 语法…&#10;&#10;# 标题&#10;**加粗** *斜体* &#96;代码&#96;&#10;- 列表项&#10;> 引用"
+                                      aria-label="Markdown 编辑器">${escapeHtml(editDraft)}</textarea>
+                        </div>
+                        <div class="kb-editor-divider"></div>
+                        <div class="kb-preview-pane">
+                            <div class="kb-editor-pane-label">预览</div>
+                            <div class="kb-doc-content kb-preview-content" id="kb-preview">${renderMarkdown(editDraft)}</div>
+                        </div>
+                    </div>
+                `;
+                const textarea = document.getElementById('kb-editor-textarea');
+                const preview = document.getElementById('kb-preview');
+                if (textarea) {
+                    textarea.addEventListener('input', (e) => {
+                        editDraft = e.target.value;
+                        if (preview) {
+                            preview.innerHTML = renderMarkdown(editDraft);
+                        }
+                    });
+                    textarea.focus();
+                    textarea.setSelectionRange(0, 0);
+                }
+            } else {
+                bodyEl.innerHTML = `
+                    <div class="kb-doc-content">
+                        ${renderMarkdown(doc.content || '')}
+                    </div>
+                `;
+            }
+        }
+    }
+
+    function renderMarkdown(text) {
+        if (!text) return '';
+        
+        let html = escapeHtml(text);
+        
+        html = html.replace(/^### (.*$)/gm, '<h3>$1</h3>');
+        html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
+        html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
+        
+        html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+        html = html.replace(/`(.+?)`/g, '<code>$1</code>');
+        
+        html = html.replace(/^> (.*$)/gm, '<blockquote>$1</blockquote>');
+        
+        html = html.replace(/^(\d+)\. (.*$)/gm, (m, num, content) => {
+            return `<li class="ol-li">${content}</li>`;
+        });
+        html = html.replace(/^- (.*$)/gm, '<li>$1</li>');
+        
+        html = html.replace(/((?:<li[^>]*>.*<\/li>\n?)+)/g, (match) => {
+            const isOl = match.includes('class="ol-li"');
+            const tag = isOl ? 'ol' : 'ul';
+            const items = match.replace(/class="ol-li"/g, '').trim();
+            return `<${tag}>${items}</${tag}>`;
+        });
+        
+        const lines = html.split('\n');
+        let inPara = false;
+        let result = [];
+        
+        for (let line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed) {
+                if (inPara) {
+                    result.push('</p>');
+                    inPara = false;
+                }
+                continue;
+            }
+            if (/^<(h[1-6]|ul|ol|li|blockquote|pre|code)/.test(trimmed) || /^<\/(ul|ol|li|blockquote|pre|code)/.test(trimmed)) {
+                if (inPara) {
+                    result.push('</p>');
+                    inPara = false;
+                }
+                result.push(line);
+            } else {
+                if (!inPara) {
+                    result.push('<p>');
+                    inPara = true;
+                } else {
+                    // 段落内的单换行渲染为 <br>，符合 Word 式输入习惯
+                    // 用户按一次回车即显示一次换行，无需 Shift+Enter
+                    result.push('<br>');
+                }
+                result.push(line);
+            }
+        }
+        if (inPara) {
+            result.push('</p>');
+        }
+        
+        return result.join('\n');
+    }
+
+    function toggleTag(tag) {
+        const index = activeTags.indexOf(tag);
+        if (index === -1) {
+            activeTags.push(tag);
+        } else {
+            activeTags.splice(index, 1);
+        }
+        renderTags();
+        renderSidebar();
+    }
+
+    function toggleCategory(catId) {
+        const cat = Store.getCategoryById(catId);
+        if (!cat) return;
+        Store.updateCategory(catId, { expanded: cat.expanded === false ? true : false });
+        renderSidebar();
+    }
+
+    async function selectDocument(docId) {
+        if (editMode && currentDocId && editDraft !== Store.getKnowledgeById(currentDocId)?.content) {
+            const ok = await Dialog.confirm({
+                title: '放弃修改？',
+                message: '当前文档有未保存的修改，切换后将无法恢复。',
+                confirmText: '放弃修改',
+                cancelText: '继续编辑',
+                danger: true
+            });
+            if (!ok) {
+                return;
+            }
+        }
+        currentDocId = docId;
+        editMode = false;
+        const doc = Store.getKnowledgeById(docId);
+        editDraft = doc?.content || '';
+        renderSidebar();
+        renderContent();
+    }
+
+    function toggleEditMode() {
+        if (!currentDocId) return;
+        
+        if (editMode) {
+            saveDocument();
+        } else {
+            const doc = Store.getKnowledgeById(currentDocId);
+            editDraft = doc?.content || '';
+            editMode = true;
+            renderContent();
+        }
+    }
+
+    async function cancelEdit() {
+        if (!currentDocId) return;
+
+        // 检查是否有未保存的修改
+        const doc = Store.getKnowledgeById(currentDocId);
+        if (editDraft !== (doc?.content || '')) {
+            const ok = await Dialog.confirm({
+                title: '放弃修改？',
+                message: '当前文档有未保存的修改，放弃后将无法恢复。',
+                confirmText: '放弃修改',
+                cancelText: '继续编辑',
+                danger: true
+            });
+            if (!ok) {
+                return;
+            }
+        }
+
+        // 如果是新建的空文档（无标题且无内容），取消时直接删除
+        if (doc && doc.title === '无标题文档' && !doc.content) {
+            // 找到文档所在分类并移除
+            const categories = Store.getKnowledgeCategories();
+            categories.forEach(cat => {
+                if (cat.documents && cat.documents.includes(currentDocId)) {
+                    Store.removeDocumentFromCategory(cat.id, currentDocId);
+                }
+            });
+            Store.deleteKnowledge(currentDocId);
+            currentDocId = null;
+            if (window.App && typeof window.App.showToast === 'function') {
+                window.App.showToast('已放弃新建文档', 'info');
+            }
+        } else {
+            // 恢复草稿为已保存内容
+            editDraft = doc?.content || '';
+            if (window.App && typeof window.App.showToast === 'function') {
+                window.App.showToast('已取消编辑', 'info');
+            }
+        }
+
+        editMode = false;
+        renderSidebar();
+        renderContent();
+    }
+
+    function saveDocument() {
+        if (!currentDocId) return;
+
+        const trimmedDraft = editDraft.trim();
+        const firstLine = trimmedDraft ? trimmedDraft.split('\n').find(l => l.trim()) : '';
+        let title = firstLine ? firstLine.replace(/^#+\s*/, '').trim() : '';
+        if (!title) title = '无标题文档';
+
+        Store.updateKnowledge(currentDocId, {
+            content: editDraft,
+            title: title,
+            updatedAt: new Date().toISOString()
+        });
+        
+        editMode = false;
+        if (window.App && typeof window.App.showToast === 'function') {
+            window.App.showToast('文档已保存', 'success');
+        }
+        renderSidebar();
+        renderContent();
+    }
+
+    async function handleAddCategory() {
+        const name = await Dialog.prompt({
+            title: '新建分类',
+            message: '请输入分类名称：',
+            placeholder: '分类名称',
+            confirmText: '创建'
+        });
+        if (!name || !name.trim()) return;
+        Store.addCategory(name.trim());
+        renderSidebar();
+        if (window.App && typeof window.App.showToast === 'function') {
+            window.App.showToast('分类已创建', 'success');
+        }
+    }
+
+    async function handleRenameCategory(catId) {
+        const cat = Store.getCategoryById(catId);
+        if (!cat) return;
+        const name = await Dialog.prompt({
+            title: '重命名分类',
+            message: '请输入新的分类名称：',
+            defaultValue: cat.name,
+            confirmText: '保存'
+        });
+        if (!name || !name.trim()) return;
+        Store.updateCategory(catId, { name: name.trim() });
+        renderSidebar();
+        if (window.App && typeof window.App.showToast === 'function') {
+            window.App.showToast('分类已重命名', 'success');
+        }
+    }
+
+    async function handleDeleteCategory(catId) {
+        const cat = Store.getCategoryById(catId);
+        if (!cat) return;
+        const ok = await Dialog.confirm({
+            title: '删除分类',
+            message: `确定要删除分类「${cat.name}」吗？\n（仅删除分类，文档会保留）`,
+            confirmText: '删除',
+            cancelText: '取消',
+            danger: true
+        });
+        if (!ok) return;
+        Store.deleteCategory(catId);
+        renderSidebar();
+        if (window.App && typeof window.App.showToast === 'function') {
+            window.App.showToast('分类已删除', 'success');
+        }
+    }
+
+    function handleAddDocument(categoryId) {
+        // 防御：过滤掉 Event 对象等非字符串参数
+        if (categoryId && typeof categoryId !== 'string') {
+            categoryId = null;
+        }
+
+        const categories = Store.getKnowledgeCategories();
+        let catId = categoryId;
+        
+        if (!catId) {
+            if (categories.length === 0) {
+                const newCat = Store.addCategory('默认分类');
+                catId = newCat.id;
+            } else {
+                catId = categories[0].id;
+            }
+        }
+        
+        // 自动展开目标分类，确保新建文档在列表中可见
+        const targetCat = Store.getCategoryById(catId);
+        if (targetCat && targetCat.expanded === false) {
+            Store.updateCategory(catId, { expanded: true });
+        }
+        
+        const newDoc = Store.addKnowledge({
+            title: '无标题文档',
+            content: '',
+            tags: [],
+            status: 'pending',
+            author: '我'
+        });
+        
+        Store.addDocumentToCategory(catId, newDoc.id);
+        
+        currentDocId = newDoc.id;
+        editDraft = newDoc.content;
+        editMode = true;
+        
+        renderSidebar();
+        renderContent();
+        if (window.App && typeof window.App.showToast === 'function') {
+            window.App.showToast('已创建新文档，开始编辑吧', 'success');
+        }
+    }
+
+    async function handleDeleteDocument(docId) {
+        const doc = Store.getKnowledgeById(docId);
+        if (!doc) return;
+        const ok = await Dialog.confirm({
+            title: '删除文档',
+            message: `确定要删除文档「${doc.title}」吗？\n此操作不可恢复。`,
+            confirmText: '删除',
+            cancelText: '取消',
+            danger: true
+        });
+        if (!ok) return;
+
+        Store.deleteKnowledge(docId);
+        
+        if (currentDocId === docId) {
+            currentDocId = null;
+            editMode = false;
+        }
+        
+        renderSidebar();
+        renderContent();
+        if (window.App && typeof window.App.showToast === 'function') {
+            window.App.showToast('文档已删除', 'success');
+        }
+    }
+
+    function formatDate(dateStr) {
+        if (!dateStr) return '';
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return dateStr;
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function clearFilters() {
+        searchQuery = '';
+        activeTags = [];
+        const searchInput = document.getElementById('knowledge-search');
+        if (searchInput) searchInput.value = '';
+        renderSidebar();
+    }
+
+    return {
+        init,
+        render,
+        clearFilters
+    };
+})();
