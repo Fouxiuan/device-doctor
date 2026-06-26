@@ -127,6 +127,38 @@
     border-color: var(--primary);
 }
 
+/* 展开全部 / 收起 标签按钮 */
+.kb-filter-tag-toggle {
+    padding: 4px 10px;
+    font-size: 12px;
+    border-radius: 12px;
+    background: transparent;
+    color: var(--primary);
+    border: 1px dashed var(--border-light);
+    cursor: pointer;
+    transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+    white-space: nowrap;
+    font-weight: 500;
+}
+
+.kb-filter-tag-toggle:hover {
+    background: var(--bg-tertiary);
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.kb-filter-tag-toggle:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .kb-filter-tag-toggle,
+    .kb-filter-tag {
+        transition: none;
+    }
+}
+
 .kb-categories {
     flex: 1;
     overflow-y: auto;
