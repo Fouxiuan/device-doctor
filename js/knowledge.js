@@ -154,7 +154,7 @@ const Knowledge = (function() {
             const expanded = cat.expanded !== false;
             
             html += `
-                <div class="kbcategory" data-cat-id="${cat.id}">
+                <div class="kb-category" data-cat-id="${cat.id}">
                     <div class="kb-category-header" tabindex="0" role="button" aria-expanded="${expanded ? 'true' : 'false'}" aria-label="分类 ${escapeHtml(cat.name)}，${expanded ? '已展开，点击折叠' : '已折叠，点击展开'}">
                         <span class="kb-category-toggle" aria-hidden="true">
                             <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="${expanded ? 'rotated' : ''}">
