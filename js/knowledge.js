@@ -4,6 +4,9 @@ const Knowledge = (function() {
     let currentDocId = null;
     let editMode = false;
     let editDraft = '';
+    // 编辑模式下的文档属性草稿
+    let editTags = [];
+    let editCategoryId = null;
 
     function init() {
         bindEvents();
@@ -349,7 +352,37 @@ const Knowledge = (function() {
 
         if (bodyEl) {
             if (editMode) {
+                const categories = Store.getKnowledgeCategories();
+                const selectedCatId = editCategoryId || findDocCategoryId(currentDocId);
+
                 bodyEl.innerHTML = `
+                    <div class="kb-edit-meta" role="group" aria-label="文档属性">
+                        <div class="kb-edit-meta-row">
+                            <label class="kb-edit-meta-label" for="kb-edit-category">分类</label>
+                            <select class="kb-edit-category" id="kb-edit-category" name="kb-edit-category" autocomplete="off">
+                                <option value="">未分类</option>
+                                ${categories.map(c => `
+                                    <option value="${escapeHtml(c.id)}" ${selectedCatId === c.id ? 'selected' : ''}>
+                                        ${escapeHtml(c.name)}
+                                    </option>
+                                `).join('')}
+                            </select>
+                        </div>
+                        <div class="kb-edit-meta-row">
+                            <label class="kb-edit-meta-label" for="kb-tag-add-input">标签</label>
+                            <div class="kb-edit-tags" id="kb-edit-tags" role="group" aria-label="文档标签">
+                                ${editTags.map(tag => `
+                                    <span class="kb-edit-tag-chip" data-tag="${escapeHtml(tag)}">
+                                        ${escapeHtml(tag)}
+                                        <button type="button" class="kb-edit-tag-remove" data-remove-tag="${escapeHtml(tag)}" aria-label="移除标签 ${escapeHtml(tag)}">&times;</button>
+                                    </span>
+                                `).join('')}
+                                <input type="text" class="kb-tag-add-input" id="kb-tag-add-input"
+                                       placeholder="输入标签后回车添加…"
+                                       autocomplete="off" name="kb-tag-add" />
+                            </div>
+                        </div>
+                    </div>
                     <div class="kb-editor-wrap">
                         <div class="kb-editor-pane">
                             <div class="kb-editor-pane-label">编辑</div>
@@ -364,6 +397,7 @@ const Knowledge = (function() {
                         </div>
                     </div>
                 `;
+                bindEditMetaEvents();
                 const textarea = document.getElementById('kb-editor-textarea');
                 const preview = document.getElementById('kb-preview');
                 if (textarea) {
@@ -469,8 +503,102 @@ const Knowledge = (function() {
         renderSidebar();
     }
 
+    // 查找文档当前所属的分类 id；不属于任何分类时返回 null
+    function findDocCategoryId(docId) {
+        if (!docId) return null;
+        const categories = Store.getKnowledgeCategories();
+        for (const cat of categories) {
+            if (cat.documents && cat.documents.includes(docId)) {
+                return cat.id;
+            }
+        }
+        return null;
+    }
+
+    // 判断编辑中的草稿相对已保存状态是否有改动（内容、标签、分类）
+    function hasUnsavedChanges() {
+        if (!currentDocId) return false;
+        const doc = Store.getKnowledgeById(currentDocId);
+        if (!doc) return false;
+        if (editDraft !== (doc.content || '')) return true;
+        const origTags = (doc.tags || []).slice().sort();
+        const draftTags = editTags.slice().sort();
+        if (origTags.length !== draftTags.length) return true;
+        if (origTags.some((t, i) => t !== draftTags[i])) return true;
+        if ((editCategoryId || null) !== (findDocCategoryId(currentDocId))) return true;
+        return false;
+    }
+
+    // 绑定编辑模式下的属性区事件：标签增删、分类切换
+    function bindEditMetaEvents() {
+        const tagInput = document.getElementById('kb-tag-add-input');
+        const tagsContainer = document.getElementById('kb-edit-tags');
+        const categorySelect = document.getElementById('kb-edit-category');
+
+        if (tagsContainer) {
+            tagsContainer.addEventListener('click', (e) => {
+                const removeBtn = e.target.closest('[data-remove-tag]');
+                if (!removeBtn) return;
+                const tag = removeBtn.dataset.removeTag;
+                editTags = editTags.filter(t => t !== tag);
+                renderEditTags();
+            });
+        }
+
+        if (tagInput) {
+            tagInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ',') {
+                    e.preventDefault();
+                    const val = tagInput.value.trim();
+                    if (val && !editTags.includes(val)) {
+                        editTags.push(val);
+                        renderEditTags();
+                    }
+                    tagInput.value = '';
+                } else if (e.key === 'Backspace' && tagInput.value === '' && editTags.length > 0) {
+                    // 输入框为空时退格删除最后一个标签
+                    editTags.pop();
+                    renderEditTags();
+                }
+            });
+        }
+
+        if (categorySelect) {
+            categorySelect.addEventListener('change', (e) => {
+                editCategoryId = e.target.value || null;
+            });
+        }
+    }
+
+    // 仅重渲染编辑模式下的标签 chip 区，保留输入框焦点
+    function renderEditTags() {
+        const tagsContainer = document.getElementById('kb-edit-tags');
+        const tagInput = document.getElementById('kb-tag-add-input');
+        if (!tagsContainer) return;
+        const inputFocused = document.activeElement === tagInput;
+        const inputVal = tagInput ? tagInput.value : '';
+
+        const chipsHtml = editTags.map(tag => `
+            <span class="kb-edit-tag-chip" data-tag="${escapeHtml(tag)}">
+                ${escapeHtml(tag)}
+                <button type="button" class="kb-edit-tag-remove" data-remove-tag="${escapeHtml(tag)}" aria-label="移除标签 ${escapeHtml(tag)}">&times;</button>
+            </span>
+        `).join('');
+
+        tagsContainer.innerHTML = chipsHtml + `
+            <input type="text" class="kb-tag-add-input" id="kb-tag-add-input"
+                   placeholder="输入标签后回车添加…"
+                   autocomplete="off" name="kb-tag-add" />
+        `;
+        const newInput = document.getElementById('kb-tag-add-input');
+        if (newInput && inputFocused) {
+            newInput.focus();
+            newInput.value = inputVal;
+        }
+    }
+
     async function selectDocument(docId) {
-        if (editMode && currentDocId && editDraft !== Store.getKnowledgeById(currentDocId)?.content) {
+        if (editMode && currentDocId && hasUnsavedChanges()) {
             const ok = await Dialog.confirm({
                 title: '放弃修改？',
                 message: '当前文档有未保存的修改，切换后将无法恢复。',
@@ -486,18 +614,22 @@ const Knowledge = (function() {
         editMode = false;
         const doc = Store.getKnowledgeById(docId);
         editDraft = doc?.content || '';
+        editTags = (doc?.tags || []).slice();
+        editCategoryId = findDocCategoryId(docId);
         renderSidebar();
         renderContent();
     }
 
     function toggleEditMode() {
         if (!currentDocId) return;
-        
+
         if (editMode) {
             saveDocument();
         } else {
             const doc = Store.getKnowledgeById(currentDocId);
             editDraft = doc?.content || '';
+            editTags = (doc?.tags || []).slice();
+            editCategoryId = findDocCategoryId(currentDocId);
             editMode = true;
             renderContent();
         }
@@ -506,9 +638,9 @@ const Knowledge = (function() {
     async function cancelEdit() {
         if (!currentDocId) return;
 
-        // 检查是否有未保存的修改
+        // 检查是否有未保存的修改（内容、标签、分类）
         const doc = Store.getKnowledgeById(currentDocId);
-        if (editDraft !== (doc?.content || '')) {
+        if (hasUnsavedChanges()) {
             const ok = await Dialog.confirm({
                 title: '放弃修改？',
                 message: '当前文档有未保存的修改，放弃后将无法恢复。',
@@ -538,6 +670,8 @@ const Knowledge = (function() {
         } else {
             // 恢复草稿为已保存内容
             editDraft = doc?.content || '';
+            editTags = (doc?.tags || []).slice();
+            editCategoryId = findDocCategoryId(currentDocId);
             if (window.App && typeof window.App.showToast === 'function') {
                 window.App.showToast('已取消编辑', 'info');
             }
@@ -556,16 +690,27 @@ const Knowledge = (function() {
         let title = firstLine ? firstLine.replace(/^#+\s*/, '').trim() : '';
         if (!title) title = '无标题文档';
 
+        // 保存内容、标题、标签（同步到全局 tags 由 Store 负责）
         Store.updateKnowledge(currentDocId, {
             content: editDraft,
             title: title,
+            tags: editTags.slice(),
             updatedAt: new Date().toISOString()
         });
-        
+
+        // 切换文档所属分类
+        const targetCatId = editCategoryId || null;
+        if ((targetCatId) !== findDocCategoryId(currentDocId)) {
+            Store.setDocumentCategory(currentDocId, targetCatId);
+        }
+
         editMode = false;
         if (window.App && typeof window.App.showToast === 'function') {
+
             window.App.showToast('文档已保存', 'success');
+
         }
+        renderTags();
         renderSidebar();
         renderContent();
     }
@@ -581,7 +726,9 @@ const Knowledge = (function() {
         Store.addCategory(name.trim());
         renderSidebar();
         if (window.App && typeof window.App.showToast === 'function') {
+
             window.App.showToast('分类已创建', 'success');
+
         }
     }
 
@@ -598,7 +745,9 @@ const Knowledge = (function() {
         Store.updateCategory(catId, { name: name.trim() });
         renderSidebar();
         if (window.App && typeof window.App.showToast === 'function') {
+
             window.App.showToast('分类已重命名', 'success');
+
         }
     }
 
@@ -616,7 +765,9 @@ const Knowledge = (function() {
         Store.deleteCategory(catId);
         renderSidebar();
         if (window.App && typeof window.App.showToast === 'function') {
+
             window.App.showToast('分类已删除', 'success');
+
         }
     }
 
@@ -656,8 +807,10 @@ const Knowledge = (function() {
         
         currentDocId = newDoc.id;
         editDraft = newDoc.content;
+        editTags = (newDoc.tags || []).slice();
+        editCategoryId = catId;
         editMode = true;
-        
+
         renderSidebar();
         renderContent();
         if (window.App && typeof window.App.showToast === 'function') {
@@ -687,7 +840,9 @@ const Knowledge = (function() {
         renderSidebar();
         renderContent();
         if (window.App && typeof window.App.showToast === 'function') {
+
             window.App.showToast('文档已删除', 'success');
+
         }
     }
 
