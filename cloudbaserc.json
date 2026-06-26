@@ -1,0 +1,21 @@
+{
+  "version": "2.0",
+  "envId": "{{envId}}",
+  "$schema": "https://framework-1258016615.tcloudbaseapp.com/schema/latest.json",
+  "hosting": {
+    "entry": "./index.html",
+    "publicDir": ".",
+    "ignore": [
+      "node_modules",
+      ".git",
+      ".gitignore",
+      "tests",
+      "*.md",
+      "package.json",
+      "package-lock.json",
+      "设备诊疗师-创意方案.html",
+      "设备诊疗师-初赛报名帖.md",
+      "设备诊疗师-报名帖.txt"
+    ]
+  }
+}
