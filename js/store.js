@@ -179,8 +179,18 @@ const Store = (function() {
         const data = getAll();
         const index = data.knowledge.findIndex(k => k.id === id);
         if (index === -1) return null;
-        
+
         data.knowledge[index] = { ...data.knowledge[index], ...updates };
+
+        // 同步新标签到全局 tags 数组，保证标签筛选列表可见
+        if (updates.tags) {
+            updates.tags.forEach(tag => {
+                if (!data.tags.includes(tag)) {
+                    data.tags.push(tag);
+                }
+            });
+        }
+
         saveAll(data);
         return data.knowledge[index];
     }
@@ -240,11 +250,80 @@ const Store = (function() {
         return data.knowledgeCategories[index];
     }
 
+    // 未分类组的固定 id 与名称，用于容纳孤儿文档
+    const UNCATEGORIZED_ID = 'cat-uncategorized';
+    const UNCATEGORIZED_NAME = '未分类';
+
+    function ensureUncategorized(data) {
+        if (!data.knowledgeCategories) data.knowledgeCategories = [];
+        let cat = data.knowledgeCategories.find(c => c.id === UNCATEGORIZED_ID);
+        if (!cat) {
+            cat = {
+                id: UNCATEGORIZED_ID,
+                name: UNCATEGORIZED_NAME,
+                expanded: true,
+                documents: []
+            };
+            data.knowledgeCategories.push(cat);
+        }
+        if (!cat.documents) cat.documents = [];
+        return cat;
+    }
+
     function deleteCategory(id) {
         const data = getAll();
         if (!data.knowledgeCategories) return false;
-        
+
+        const target = data.knowledgeCategories.find(c => c.id === id);
+        const orphanDocs = target && target.documents ? target.documents.slice() : [];
+
         data.knowledgeCategories = data.knowledgeCategories.filter(c => c.id !== id);
+
+        // 把被删分类里的文档迁移到“未分类”组，避免文档从侧边栏消失
+        if (orphanDocs.length > 0 && id !== UNCATEGORIZED_ID) {
+            const uncat = ensureUncategorized(data);
+            orphanDocs.forEach(docId => {
+                if (!uncat.documents.includes(docId)) {
+                    uncat.documents.push(docId);
+                }
+            });
+        }
+
+        saveAll(data);
+        return true;
+    }
+
+    // 把文档从其所属的所有分类移除
+    function removeDocumentFromAllCategories(data, docId) {
+        if (!data.knowledgeCategories) return;
+        data.knowledgeCategories.forEach(cat => {
+            if (cat.documents) {
+                cat.documents = cat.documents.filter(did => did !== docId);
+            }
+        });
+    }
+
+    // 把文档移动到指定分类；categoryId 为 null 时移入“未分类”组
+    function setDocumentCategory(docId, categoryId) {
+        const data = getAll();
+        if (!data.knowledgeCategories) data.knowledgeCategories = [];
+
+        // 先从所有分类中移除该文档
+        removeDocumentFromAllCategories(data, docId);
+
+        let targetCat;
+        if (categoryId) {
+            targetCat = data.knowledgeCategories.find(c => c.id === categoryId);
+            if (!targetCat) return false;
+        } else {
+            targetCat = ensureUncategorized(data);
+        }
+
+        if (!targetCat.documents) targetCat.documents = [];
+        if (!targetCat.documents.includes(docId)) {
+            targetCat.documents.push(docId);
+        }
+
         saveAll(data);
         return true;
     }
@@ -529,6 +608,7 @@ const Store = (function() {
         deleteCategory,
         addDocumentToCategory,
         removeDocumentFromCategory,
+        setDocumentCategory,
         getTags,
         addTag,
         exportToJSON,
