@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>设备诊疗师 - TRAE AI 创造力大赛</title>
+<style>
+/* ========== CSS Variables ========== */
+:root {
+  --bg-primary: #0a0e1a;
+  --bg-secondary: #111827;
+  --bg-card: #1a2236;
+  --bg-card-hover: #1f2a42;
+  --text-primary: #e8ecf4;
+  --text-secondary: #9ca3b8;
+  --text-muted: #6b7280;
+  --accent-blue: #4A90D9;
+  --accent-green: #4CAF50;
+  --accent-orange: #FF9800;
+  --accent-blue-dim: rgba(74, 144, 217, 0.15);
+  --accent-green-dim: rgba(76, 175, 80, 0.15);
+  --accent-orange-dim: rgba(255, 152, 0, 0.15);
+  --border-color: rgba(255, 255, 255, 0.08);
+  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.3);
+  --shadow-card-hover: 0 8px 40px rgba(0, 0, 0, 0.5);
+  --radius: 16px;
+  --radius-sm: 10px;
+  --font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  --max-width: 1100px;
+  --transition: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ========== Reset & Base ========== */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  font-size: 16px;
+}
+
+body {
+  font-family: var(--font-family);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.7;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--accent-blue);
+  text-decoration: none;
+}
+
+/* ========== Scrollbar ========== */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-primary); }
+::-webkit-scrollbar-thumb { background: var(--accent-blue); border-radius: 3px; }
+
+/* ========== Container ========== */
+.container {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* ========== Section Base ========== */
+.section {
+  padding: 100px 0;
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.8s ease, transform 0.8s ease;
+}
+
+.section.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.section-label {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--accent-blue);
+  background: var(--accent-blue-dim);
+  padding: 6px 16px;
+  border-radius: 20px;
+  margin-bottom: 16px;
+}
+
+.section-title {
+  font-size: 2.2rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+  background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-blue) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.section-desc {
+  color: var(--text-secondary);
+  font-size: 1.05rem;
+  max-width: 680px;
+  margin-bottom: 48px;
+}
+
+/* ========== Hero ========== */
+.hero {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  padding: 60px 24px;
+}
+
+.hero::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(ellipse at 30% 20%, rgba(74, 144, 217, 0.08) 0%, transparent 50%),
+              radial-gradient(ellipse at 70% 80%, rgba(76, 175, 80, 0.06) 0%, transparent 50%),
+              radial-gradient(ellipse at 50% 50%, rgba(255, 152, 0, 0.04) 0%, transparent 40%);
+  animation: heroGlow 12s ease-in-out infinite alternate;
+}
+
+@keyframes heroGlow {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  100% { transform: translate(-2%, -1%) rotate(2deg); }
+}
+
+/* Grid pattern overlay */
+.hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(74, 144, 217, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(74, 144, 217, 0.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+  mask-image: radial-gradient(ellipse at center, black 30%, transparent 70%);
+  -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 70%);
+}
+
+.hero-content {
+  position: relative;
+  z-index: 1;
+  max-width: 780px;
+}
+
+.hero-badge {
+  display: inline-block;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--accent-blue);
+  background: var(--accent-blue-dim);
+  border: 1px solid rgba(74, 144, 217, 0.2);
+  padding: 8px 20px;
+  border-radius: 24px;
+  margin-bottom: 32px;
+  letter-spacing: 1px;
+}
+
+.hero-title {
+  font-size: 4rem;
+  font-weight: 800;
+  line-height: 1.15;
+  margin-bottom: 12px;
+  background: linear-gradient(135deg, #ffffff 0%, var(--accent-blue) 60%, var(--accent-green) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: heroTitleIn 1.2s ease-out forwards;
+}
+
+@keyframes heroTitleIn {
+  0% { opacity: 0; transform: translateY(20px); filter: blur(8px); }
+  100% { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+
+.hero-subtitle {
+  font-size: 1.6rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+  animation: heroSubIn 1.2s ease-out 0.3s forwards;
+  opacity: 0;
+}
+
+@keyframes heroSubIn {
+  0% { opacity: 0; transform: translateY(15px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.hero-desc {
+  font-size: 1.1rem;
+  color: var(--text-muted);
+  max-width: 600px;
+  margin: 0 auto 40px;
+  line-height: 1.8;
+  animation: heroDescIn 1.2s ease-out 0.6s forwards;
+  opacity: 0;
+}
+
+@keyframes heroDescIn {
+  0% { opacity: 0; transform: translateY(15px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.hero-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, var(--accent-blue), #3a7bc8);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 14px 36px;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  transition: var(--transition);
+  box-shadow: 0 4px 20px rgba(74, 144, 217, 0.3);
+  animation: heroCtaIn 1.2s ease-out 0.9s forwards;
+  opacity: 0;
+  text-decoration: none;
+}
+
+@keyframes heroCtaIn {
+  0% { opacity: 0; transform: translateY(15px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.hero-cta:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(74, 144, 217, 0.45);
+}
+
+.hero-cta .arrow {
+  display: inline-block;
+  transition: transform 0.3s ease;
+}
+
+.hero-cta:hover .arrow {
+  transform: translateX(4px);
+}
+
+/* ========== Pain Points ========== */
+.pain-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.pain-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 36px 28px;
+  transition: var(--transition);
+  position: relative;
+  overflow: hidden;
+}
+
+.pain-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent-orange), var(--accent-blue));
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.pain-card:hover {
+  transform: translateY(-4px);
+  background: var(--bg-card-hover);
+  box-shadow: var(--shadow-card-hover);
+  border-color: rgba(255, 152, 0, 0.15);
+}
+
+.pain-card:hover::before {
+  opacity: 1;
+}
+
+.pain-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  margin-bottom: 20px;
+}
+
+.pain-icon.orange { background: var(--accent-orange-dim); }
+.pain-icon.blue { background: var(--accent-blue-dim); }
+.pain-icon.green { background: var(--accent-green-dim); }
+
+.pain-card h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+  color: var(--text-primary);
+}
+
+.pain-card p {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+
+/* ========== Features ========== */
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+}
+
+.feature-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 36px 28px;
+  transition: var(--transition);
+  position: relative;
+  overflow: hidden;
+}
+
+.feature-card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.feature-card:nth-child(1)::after { background: var(--accent-blue); }
+.feature-card:nth-child(2)::after { background: var(--accent-green); }
+.feature-card:nth-child(3)::after { background: var(--accent-orange); }
+.feature-card:nth-child(4)::after { background: linear-gradient(90deg, var(--accent-blue), var(--accent-green)); }
+
+.feature-card:hover {
+  transform: translateY(-4px);
+  background: var(--bg-card-hover);
+  box-shadow: var(--shadow-card-hover);
+}
+
+.feature-card:hover::after {
+  opacity: 1;
+}
+
+.feature-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.feature-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+
+.feature-icon.blue { background: var(--accent-blue-dim); }
+.feature-icon.green { background: var(--accent-green-dim); }
+.feature-icon.orange { background: var(--accent-orange-dim); }
+.feature-icon.gradient { background: linear-gradient(135deg, var(--accent-blue-dim), var(--accent-green-dim)); }
+
+.feature-card h3 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.feature-card p {
+  color: var(--text-secondary);
+  font-size: 0.93rem;
+  line-height: 1.75;
+}
+
+.feature-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.feature-tag {
+  font-size: 0.75rem;
+  padding: 4px 12px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-muted);
+  border: 1px solid var(--border-color);
+}
+
+/* ========== Flow ========== */
+.flow-steps {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0;
+  flex-wrap: wrap;
+}
+
+.flow-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  width: 160px;
+  flex-shrink: 0;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.flow-step.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.flow-step-num {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin-bottom: 14px;
+  border: 2px solid;
+  transition: var(--transition);
+}
+
+.flow-step:nth-child(1) .flow-step-num { border-color: var(--accent-orange); color: var(--accent-orange); background: var(--accent-orange-dim); }
+.flow-step:nth-child(3) .flow-step-num { border-color: var(--accent-blue); color: var(--accent-blue); background: var(--accent-blue-dim); }
+.flow-step:nth-child(5) .flow-step-num { border-color: var(--accent-green); color: var(--accent-green); background: var(--accent-green-dim); }
+.flow-step:nth-child(7) .flow-step-num { border-color: var(--accent-blue); color: var(--accent-blue); background: var(--accent-blue-dim); }
+.flow-step:nth-child(9) .flow-step-num { border-color: var(--accent-green); color: var(--accent-green); background: var(--accent-green-dim); }
+
+.flow-step:hover .flow-step-num {
+  transform: scale(1.1);
+}
+
+.flow-step h4 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.flow-step p {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.flow-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 56px;
+  flex-shrink: 0;
+  color: var(--text-muted);
+  font-size: 1.2rem;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+
+.flow-arrow.visible {
+  opacity: 1;
+}
+
+/* ========== Tech Stack ========== */
+.tech-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+.tech-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 24px;
+  transition: var(--transition);
+}
+
+.tech-item:hover {
+  background: var(--bg-card-hover);
+  border-color: rgba(74, 144, 217, 0.2);
+  transform: translateY(-2px);
+}
+
+.tech-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+  background: var(--accent-blue-dim);
+}
+
+.tech-item h4 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.tech-item p {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+/* ========== Values ========== */
+.value-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.value-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 36px 28px;
+  text-align: center;
+  transition: var(--transition);
+  position: relative;
+}
+
+.value-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-card-hover);
+}
+
+.value-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  margin: 0 auto 20px;
+}
+
+.value-icon.blue { background: var(--accent-blue-dim); }
+.value-icon.green { background: var(--accent-green-dim); }
+.value-icon.orange { background: var(--accent-orange-dim); }
+
+.value-card h3 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: var(--text-primary);
+}
+
+.value-card p {
+  color: var(--text-secondary);
+  font-size: 0.93rem;
+  line-height: 1.75;
+}
+
+/* ========== Future ========== */
+.future-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: center;
+}
+
+.future-tag {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 20px 28px;
+  transition: var(--transition);
+  cursor: default;
+}
+
+.future-tag:hover {
+  border-color: rgba(74, 144, 217, 0.25);
+  background: var(--bg-card-hover);
+  transform: translateY(-2px);
+}
+
+.future-tag-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.future-tag:nth-child(1) .future-tag-icon { background: var(--accent-blue-dim); }
+.future-tag:nth-child(2) .future-tag-icon { background: var(--accent-green-dim); }
+.future-tag:nth-child(3) .future-tag-icon { background: var(--accent-orange-dim); }
+.future-tag:nth-child(4) .future-tag-icon { background: linear-gradient(135deg, var(--accent-blue-dim), var(--accent-green-dim)); }
+
+.future-tag-text h4 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.future-tag-text p {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* ========== Footer ========== */
+.footer {
+  text-align: center;
+  padding: 60px 24px 40px;
+  border-top: 1px solid var(--border-color);
+}
+
+.footer p {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin-bottom: 8px;
+}
+
+.footer .brand {
+  color: var(--accent-blue);
+  font-weight: 600;
+}
+
+/* ========== Divider ========== */
+.section-divider {
+  width: 60px;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent-blue), var(--accent-green));
+  border-radius: 2px;
+  margin-bottom: 48px;
+}
+
+/* ========== Responsive ========== */
+@media (max-width: 900px) {
+  .pain-grid,
+  .value-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .feature-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tech-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-title {
+    font-size: 2.8rem;
+  }
+
+  .hero-subtitle {
+    font-size: 1.3rem;
+  }
+
+  .section-title {
+    font-size: 1.8rem;
+  }
+
+  .flow-steps {
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .flow-arrow {
+    width: auto;
+    height: 32px;
+    transform: rotate(90deg);
+  }
+
+  .flow-step {
+    width: auto;
+  }
+
+  .future-tags {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .future-tag {
+    width: 100%;
+    max-width: 400px;
+  }
+}
+
+@media (max-width: 600px) {
+  .hero-title {
+    font-size: 2.2rem;
+  }
+
+  .hero-subtitle {
+    font-size: 1.1rem;
+  }
+
+  .section {
+    padding: 60px 0;
+  }
+
+  .pain-card,
+  .feature-card,
+  .value-card {
+    padding: 28px 20px;
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- ==================== Hero ==================== -->
+<section class="hero" id="top">
+  <div class="hero-content">
+    <div class="hero-badge">TRAE AI 创造力大赛 &middot; 学习工作赛道</div>
+    <h1 class="hero-title">设备诊疗师</h1>
+    <p class="hero-subtitle">异常闭环与知识管家</p>
+    <p class="hero-desc">一个基于 Web 的轻量级设备异常处理工作台，让异常处理从「人追着问题跑」变成「数据推着人走」</p>
+    <a href="#features" class="hero-cta">
+      查看核心功能 <span class="arrow">&#8594;</span>
+    </a>
+  </div>
+</section>
+
+<!-- ==================== Pain Points ==================== -->
+<section class="section" id="pain-points">
+  <div class="container">
+    <div class="section-label">痛点分析</div>
+    <h2 class="section-title">为什么需要设备诊疗师？</h2>
+    <div class="section-divider"></div>
+    <div class="pain-grid">
+      <div class="pain-card">
+        <div class="pain-icon orange">&#128227;</div>
+        <h3>状态靠吼</h3>
+        <p>设备处理状态全靠口头沟通或手动改 Excel，信息严重滞后，谁也不知道当前进展到哪一步。</p>
+      </div>
+      <div class="pain-card">
+        <div class="pain-icon blue">&#128269;</div>
+        <h3>找人靠翻</h3>
+        <p>不知道异常对应谁负责，翻通讯录、问群聊，沟通成本高，响应速度慢。</p>
+      </div>
+      <div class="pain-card">
+        <div class="pain-icon green">&#129504;</div>
+        <h3>经验靠脑</h3>
+        <p>历史解决经验散落在聊天记录或本地文档，无法即查即用，重复踩坑是常态。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== Core Features ==================== -->
+<section class="section" id="features">
+  <div class="container">
+    <div class="section-label">核心功能</div>
+    <h2 class="section-title">核心功能设计</h2>
+    <div class="section-divider"></div>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="feature-header">
+          <div class="feature-icon blue">&#128203;</div>
+          <h3>状态看板</h3>
+        </div>
+        <p>Kanban 看板设计，5 列对应处理全流程：数据校对 &rarr; 检测中 &rarr; 判定正常/危险 &rarr; 穿戴测试。卡片可拖拽，支持任意方向移动含回退。</p>
+        <div class="feature-tags">
+          <span class="feature-tag">拖拽排序</span>
+          <span class="feature-tag">5 列流程</span>
+          <span class="feature-tag">实时状态</span>
+        </div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-header">
+          <div class="feature-icon green">&#128218;</div>
+          <h3>智能知识库</h3>
+        </div>
+        <p>关键词秒级检索，标签化归档，方案状态标识（已验证/待完善/高风险），让经验可沉淀、可复用。</p>
+        <div class="feature-tags">
+          <span class="feature-tag">秒级检索</span>
+          <span class="feature-tag">标签归档</span>
+          <span class="feature-tag">状态标识</span>
+        </div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-header">
+          <div class="feature-icon orange">&#9997;&#65039;</div>
+          <h3>快速记录</h3>
+        </div>
+        <p>弹窗式异常登记，一键绑定设备、负责人、标签，支持关联知识库方案，记录即入库。</p>
+        <div class="feature-tags">
+          <span class="feature-tag">弹窗登记</span>
+          <span class="feature-tag">一键绑定</span>
+          <span class="feature-tag">关联知识库</span>
+        </div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-header">
+          <div class="feature-icon gradient">&#129302;</div>
+          <h3>AI 优化</h3>
+        </div>
+        <p>通过 TRAE MCP 调用大模型，对手动记录的解决过程进行结构化优化，降低知识沉淀门槛。</p>
+        <div class="feature-tags">
+          <span class="feature-tag">TRAE MCP</span>
+          <span class="feature-tag">结构化优化</span>
+          <span class="feature-tag">大模型赋能</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== Flow ==================== -->
+<section class="section" id="flow">
+  <div class="container">
+    <div class="section-label">闭环流程</div>
+    <h2 class="section-title">数据闭环流程</h2>
+    <div class="section-divider"></div>
+    <div class="flow-steps">
+      <div class="flow-step" data-delay="0">
+        <div class="flow-step-num">&#9888;&#65039;</div>
+        <h4>发现异常</h4>
+        <p>弹窗快速登记</p>
+      </div>
+      <div class="flow-arrow" data-delay="1">&#8594;</div>
+      <div class="flow-step" data-delay="2">
+        <div class="flow-step-num">&#128100;</div>
+        <h4>指派责任人</h4>
+        <p>@提及通知</p>
+      </div>
+      <div class="flow-arrow" data-delay="3">&#8594;</div>
+      <div class="flow-step" data-delay="4">
+        <div class="flow-step-num">&#128203;</div>
+        <h4>追踪状态</h4>
+        <p>看板实时跟进</p>
+      </div>
+      <div class="flow-arrow" data-delay="5">&#8594;</div>
+      <div class="flow-step" data-delay="6">
+        <div class="flow-step-num">&#128218;</div>
+        <h4>沉淀方案</h4>
+        <p>知识库归档</p>
+      </div>
+      <div class="flow-arrow" data-delay="7">&#8594;</div>
+      <div class="flow-step" data-delay="8">
+        <div class="flow-step-num">&#128269;</div>
+        <h4>再次检索</h4>
+        <p>秒级搜索复用</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== Tech Stack ==================== -->
+<section class="section" id="tech">
+  <div class="container">
+    <div class="section-label">技术方案</div>
+    <h2 class="section-title">技术架构</h2>
+    <div class="section-divider"></div>
+    <div class="tech-grid">
+      <div class="tech-item">
+        <div class="tech-icon">&#127760;</div>
+        <div>
+          <h4>HTML5 + CSS3 + 原生 JavaScript</h4>
+          <p>零框架依赖，轻量高效，即开即用</p>
+        </div>
+      </div>
+      <div class="tech-item">
+        <div class="tech-icon">&#128190;</div>
+        <div>
+          <h4>LocalStorage + JSON 导入导出</h4>
+          <p>双存储策略，本地持久化与数据迁移兼顾</p>
+        </div>
+      </div>
+      <div class="tech-item">
+        <div class="tech-icon">&#128170;</div>
+        <div>
+          <h4>原生 Drag and Drop API</h4>
+          <p>看板拖拽交互，流畅自然的状态流转</p>
+        </div>
+      </div>
+      <div class="tech-item">
+        <div class="tech-icon">&#129302;</div>
+        <div>
+          <h4>TRAE MCP</h4>
+          <p>AI 能力接入，大模型驱动知识优化</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== Values ==================== -->
+<section class="section" id="values">
+  <div class="container">
+    <div class="section-label">价值与意义</div>
+    <h2 class="section-title">价值与意义</h2>
+    <div class="section-divider"></div>
+    <div class="value-grid">
+      <div class="value-card">
+        <div class="value-icon blue">&#9889;</div>
+        <h3>效率提升</h3>
+        <p>每次故障处理节省 20-30 分钟，从发现到闭环形成完整链路，告别信息黑洞。</p>
+      </div>
+      <div class="value-card">
+        <div class="value-icon green">&#128161;</div>
+        <h3>知识资产</h3>
+        <p>隐性经验转化为可复用的数字资产，成为新员工的「活体避坑指南」。</p>
+      </div>
+      <div class="value-card">
+        <div class="value-icon orange">&#129302;</div>
+        <h3>AI 赋能</h3>
+        <p>大模型优化记录内容，自动结构化，降低知识沉淀门槛，让记录变得轻松。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== Future ==================== -->
+<section class="section" id="future">
+  <div class="container">
+    <div class="section-label">未来展望</div>
+    <h2 class="section-title">扩展方向</h2>
+    <div class="section-divider"></div>
+    <div class="future-tags">
+      <div class="future-tag">
+        <div class="future-tag-icon">&#128101;</div>
+        <div class="future-tag-text">
+          <h4>团队协作</h4>
+          <p>多用户数据同步与权限管理</p>
+        </div>
+      </div>
+      <div class="future-tag">
+        <div class="future-tag-icon">&#128221;</div>
+        <div class="future-tag-text">
+          <h4>Markdown 富文本</h4>
+          <p>支持 Markdown 编辑与预览</p>
+        </div>
+      </div>
+      <div class="future-tag">
+        <div class="future-tag-icon">&#128200;</div>
+        <div class="future-tag-text">
+          <h4>数据可视化</h4>
+          <p>异常趋势图表与统计分析</p>
+        </div>
+      </div>
+      <div class="future-tag">
+        <div class="future-tag-icon">&#129302;</div>
+        <div class="future-tag-text">
+          <h4>AI 深化</h4>
+          <p>异常自动分类、相似案例推荐</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== Footer ==================== -->
+<footer class="footer">
+  <p>使用 <span class="brand">TRAE Work</span> / <span class="brand">TRAE IDE</span> 创作</p>
+  <p>TRAE AI 创造力大赛 2026</p>
+</footer>
+
+<script>
+/* ========== IntersectionObserver: Section Fade In ========== */
+(function () {
+  var sections = document.querySelectorAll('.section');
+  var observer = new IntersectionObserver(function (entries) {
+    entries.forEach(function (entry) {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        // If this is the flow section, animate steps
+        if (entry.target.id === 'flow') {
+          animateFlowSteps();
+        }
+      }
+    });
+  }, { threshold: 0.15 });
+
+  sections.forEach(function (s) { observer.observe(s); });
+})();
+
+/* ========== Flow Steps Animation ========== */
+function animateFlowSteps() {
+  var steps = document.querySelectorAll('.flow-step, .flow-arrow');
+  steps.forEach(function (el) {
+    var delay = parseInt(el.getAttribute('data-delay') || '0', 10);
+    setTimeout(function () {
+      el.classList.add('visible');
+    }, delay * 120);
+  });
+}
+
+/* ========== Smooth scroll for CTA ========== */
+document.querySelector('.hero-cta').addEventListener('click', function (e) {
+  e.preventDefault();
+  var target = document.querySelector(this.getAttribute('href'));
+  if (target) {
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+});
+</script>
+</body>
+</html>
