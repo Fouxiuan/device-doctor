@@ -1,524 +1,562 @@
-// modal.js — 弹窗组件 IIFE 模块
-const Modal = (function () {
-  'use strict';
+const Modal = {
+  _currentType: null,
+  _currentId: null,
+  _editingTags: [],
 
-  var overlay = document.getElementById('modal-overlay');
-  var container = document.getElementById('modal-container');
-  var currentIssue = null;
-  var selectedTags = [];
+  init() {
+    this.bindEvents();
+  },
 
-  // ========== 打开弹窗 ==========
-  function open(issue, mode) {
-    if (mode === undefined) mode = 'issue';
-    currentIssue = issue || null;
-    selectedTags = [];
+  bindEvents() {
+    const overlay = document.getElementById('modal-overlay');
+    const closeBtn = document.getElementById('modal-close');
 
-    // 如果是编辑模式，初始化 selectedTags
-    if (issue && issue.tags) {
-      selectedTags = issue.tags.slice();
-    }
-
-    // 根据 mode 渲染不同表单
-    if (mode === 'device') {
-      renderDeviceForm(issue);
-      overlay.style.display = 'flex';
-      requestAnimationFrame(function () {
-        overlay.classList.add('show');
-      });
-      return;
-    }
-
-    if (mode === 'knowledge') {
-      renderKnowledgeForm();
-    } else {
-      var isEdit = !!issue;
-      renderIssueForm(isEdit);
-    }
-
-    overlay.style.display = 'flex';
-    requestAnimationFrame(function () {
-      overlay.classList.add('show');
-    });
-  }
-
-  // ========== 渲染异常表单 ==========
-  function renderIssueForm(isEdit) {
-    var allTags = Store.getTags();
-    var tagsHtml = '';
-    allTags.forEach(function (tag) {
-      var isActive = selectedTags.indexOf(tag) !== -1 ? ' active' : '';
-      tagsHtml += '<span class="tag-item' + isActive + '" onclick="Modal.toggleTag(\'' + tag.replace(/'/g, "\\'") + '\', this)">' + tag + '</span>';
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) this.close();
     });
 
-    var stageOptions = [
-      { value: 'verifying', label: '数据校对' },
-      { value: 'detecting', label: '检测中' },
-      { value: 'normal', label: '判定正常' },
-      { value: 'danger', label: '判定危险' },
-      { value: 'wearing', label: '穿戴测试' }
-    ];
-    var stageSelectHtml = '';
-    stageOptions.forEach(function (opt) {
-      var selected = (currentIssue && currentIssue.stage === opt.value) ? ' selected' : '';
-      if (!currentIssue && opt.value === 'verifying') selected = ' selected';
-      stageSelectHtml += '<option value="' + opt.value + '"' + selected + '>' + opt.label + '</option>';
-    });
+    closeBtn.addEventListener('click', () => this.close());
 
-    var deviceIdValue = currentIssue ? currentIssue.deviceId : '';
-    var titleValue = currentIssue ? currentIssue.title : '';
-    var assigneeValue = currentIssue ? currentIssue.assignee : '';
-    var descValue = currentIssue ? (currentIssue.description || '') : '';
-
-    // 生成设备下拉选项
-    var devices = Store.getDevices();
-    var deviceSelectHtml = '<option value="">请选择设备</option>';
-    devices.forEach(function (d) {
-      var selected = (deviceIdValue === d.deviceId) ? ' selected' : '';
-      deviceSelectHtml += '<option value="' + d.deviceId + '"' + selected + '>' + d.deviceId + ' - ' + d.name + '</option>';
-    });
-
-    var html = '' +
-      '<div class="modal-header">' +
-      '  <h3>' + (isEdit ? '编辑异常' : '新增异常') + '</h3>' +
-      '  <button class="modal-close" onclick="Modal.close()">&times;</button>' +
-      '</div>' +
-      '<div class="modal-body">' +
-      '  <div class="form-group">' +
-      '    <label for="form-device-id">设备</label>' +
-      '    <select id="form-device-id" class="form-control">' + deviceSelectHtml + '</select>' +
-      '    <div class="form-hint device-add-hint">未找到设备？<a href="#devices" onclick="Modal.close()">去添加新设备</a></div>' +
-      '  </div>' +
-      '  <div class="form-group">' +
-      '    <label for="form-title">异常现象</label>' +
-      '    <input type="text" id="form-title" class="form-control" placeholder="描述异常现象" value="' + titleValue + '">' +
-      '  </div>' +
-      '  <div class="form-group">' +
-      '    <label for="form-stage">当前阶段</label>' +
-      '    <select id="form-stage" class="form-control">' + stageSelectHtml + '</select>' +
-      '  </div>' +
-      '  <div class="form-group">' +
-      '    <label for="form-assignee">负责人</label>' +
-      '    <input type="text" id="form-assignee" class="form-control" placeholder="负责人姓名" value="' + assigneeValue + '">' +
-      '  </div>' +
-      '  <div class="form-group">' +
-      '    <label>异常标签</label>' +
-      '    <div class="tag-selector" id="tag-selector">' +
-      '      ' + tagsHtml +
-      '      <button class="tag-add-btn" onclick="Modal.addCustomTag()">+ 自定义</button>' +
-      '    </div>' +
-      '  </div>' +
-      '  <div class="form-group">' +
-      '    <label for="form-description">详细描述</label>' +
-      '    <textarea id="form-description" class="form-control" placeholder="详细描述异常情况" rows="4">' + descValue + '</textarea>' +
-      '  </div>' +
-      '</div>' +
-      '<div class="modal-footer">' +
-      '  <button class="btn btn-primary" onclick="Modal.saveIssue()">保存</button>' +
-      '  <button class="btn btn-secondary" onclick="Modal.saveAndLink()">保存并推荐方案</button>' +
-      '  <button class="btn btn-outline" onclick="Modal.close()">取消</button>' +
-      '</div>';
-
-    container.innerHTML = html;
-  }
-
-  // ========== 渲染知识库表单 ==========
-  function renderKnowledgeForm() {
-    var html = '' +
-      '<div class="modal-header">' +
-      '  <h3>新增处理方案</h3>' +
-      '  <button class="modal-close" onclick="Modal.close()">&times;</button>' +
-      '</div>' +
-      '<div class="modal-body">' +
-      '  <div class="form-group">' +
-      '    <label for="form-knowledge-title">方案标题</label>' +
-      '    <input type="text" id="form-knowledge-title" class="form-control" placeholder="输入方案标题">' +
-      '  </div>' +
-      '  <div class="form-group">' +
-      '    <label for="form-knowledge-content">处理步骤</label>' +
-      '    <textarea id="form-knowledge-content" class="form-control" placeholder="详细描述处理步骤" style="min-height:120px" rows="6"></textarea>' +
-      '  </div>' +
-      '  <div class="form-group">' +
-      '    <label for="form-knowledge-devices">关联设备</label>' +
-      '    <input type="text" id="form-knowledge-devices" class="form-control" placeholder="关联设备编号，多个用逗号分隔">' +
-      '  </div>' +
-      '  <div class="form-group">' +
-      '    <label for="form-knowledge-status">状态</label>' +
-      '    <select id="form-knowledge-status" class="form-control">' +
-      '      <option value="pending">待验证</option>' +
-      '      <option value="verified">已验证</option>' +
-      '      <option value="high-risk">高风险</option>' +
-      '    </select>' +
-      '  </div>' +
-      '</div>' +
-      '<div class="modal-footer">' +
-      '  <button class="btn btn-primary" onclick="Modal.saveKnowledge()">保存方案</button>' +
-      '  <button class="btn btn-outline" onclick="Modal.close()">取消</button>' +
-      '</div>';
-
-    container.innerHTML = html;
-  }
-
-  // ========== 渲染设备表单 ==========
-  function renderDeviceForm(device) {
-    var isEdit = !!device;
-    var deviceIdValue = device ? device.deviceId : '';
-    var nameValue = device ? device.name : '';
-    var modelValue = device ? (device.model || '') : '';
-    var locationValue = device ? (device.location || '') : '';
-    var currentStatus = device ? device.status : 'normal';
-
-    var statusOptions = [
-      { value: 'normal', label: '正常' },
-      { value: 'abnormal', label: '异常' },
-      { value: 'maintenance', label: '维修中' }
-    ];
-    var statusSelectHtml = '';
-    statusOptions.forEach(function (opt) {
-      var selected = (currentStatus === opt.value) ? ' selected' : '';
-      statusSelectHtml += '<option value="' + opt.value + '"' + selected + '>' + opt.label + '</option>';
-    });
-
-    var html = '' +
-      '<div class="modal-header">' +
-      '  <h3>' + (isEdit ? '编辑设备' : '新增设备') + '</h3>' +
-      '  <button class="modal-close" onclick="Modal.close()">&times;</button>' +
-      '</div>' +
-      '<div class="modal-body">' +
-      '  <div class="form-group">' +
-      '    <label for="form-device-code">设备编号</label>' +
-      '    <input type="text" id="form-device-code" class="form-control" placeholder="输入设备编号" value="' + deviceIdValue + '"' + (isEdit ? ' disabled' : '') + '>' +
-      (isEdit ? '' : '    <div class="form-hint" id="device-id-hint"></div>') +
-      '  </div>' +
-      '  <div class="form-group">' +
-      '    <label for="form-device-name">设备名称</label>' +
-      '    <input type="text" id="form-device-name" class="form-control" placeholder="输入设备名称" value="' + nameValue + '">' +
-      '  </div>' +
-      '  <div class="form-row">' +
-      '    <div class="form-group">' +
-      '      <label for="form-device-model">型号</label>' +
-      '      <input type="text" id="form-device-model" class="form-control" placeholder="输入型号" value="' + modelValue + '">' +
-      '    </div>' +
-      '    <div class="form-group">' +
-      '      <label for="form-device-location">位置</label>' +
-      '      <input type="text" id="form-device-location" class="form-control" placeholder="输入存放位置" value="' + locationValue + '">' +
-      '    </div>' +
-      '  </div>' +
-      '  <div class="form-group">' +
-      '    <label for="form-device-status">状态</label>' +
-      '    <select id="form-device-status" class="form-control">' + statusSelectHtml + '</select>' +
-      '  </div>' +
-      '</div>' +
-      '<div class="modal-footer">' +
-      '  <button class="btn btn-primary" onclick="Modal.saveDevice()">保存</button>' +
-      '  <button class="btn btn-outline" onclick="Modal.close()">取消</button>' +
-      '</div>';
-
-    container.innerHTML = html;
-
-    // 新增模式下绑定 deviceId 实时唯一性校验
-    if (!isEdit) {
-      var codeInput = document.getElementById('form-device-code');
-      var hintEl = document.getElementById('device-id-hint');
-      if (codeInput && hintEl) {
-        codeInput.addEventListener('input', function () {
-          var val = this.value.trim();
-          if (!val) {
-            hintEl.textContent = '';
-            return;
-          }
-          var exists = Store.getDeviceById(val);
-          if (exists) {
-            hintEl.textContent = '该设备编号已存在';
-            hintEl.style.color = 'var(--color-danger)';
-          } else {
-            hintEl.textContent = '设备编号可用';
-            hintEl.style.color = 'var(--color-normal)';
-          }
-        });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && overlay.classList.contains('show')) {
+        this.close();
       }
-    }
-  }
+    });
+  },
 
-  // ========== 关闭弹窗 ==========
-  function close() {
-    overlay.classList.remove('show');
-    setTimeout(function () {
-      overlay.style.display = 'none';
-      container.innerHTML = '';
-      currentIssue = null;
-      selectedTags = [];
-    }, 300);
-  }
+  openIssueModal(issueId = null) {
+    this._currentType = 'issue';
+    this._currentId = issueId;
+    this._editingTags = [];
 
-  // ========== 切换标签 ==========
-  function toggleTag(tag, el) {
-    var idx = selectedTags.indexOf(tag);
-    if (idx === -1) {
-      selectedTags.push(tag);
-      el.classList.add('active');
-    } else {
-      selectedTags.splice(idx, 1);
-      el.classList.remove('active');
-    }
-  }
+    const issue = issueId ? Store.getIssueById(issueId) : null;
+    const title = issue ? '编辑异常' : '新增异常';
 
-  // ========== 添加自定义标签 ==========
-  function addCustomTag() {
-    var selector = document.getElementById('tag-selector');
-    var addBtn = selector.querySelector('.tag-add-btn');
-
-    // 如果已经有输入框，聚焦即可
-    if (selector.querySelector('.tag-input-inline')) {
-      selector.querySelector('.tag-input-inline').focus();
-      return;
+    if (issue) {
+      this._editingTags = [...(issue.tags || [])];
     }
 
-    // 创建内联输入框
-    var input = document.createElement('input');
-    input.type = 'text';
-    input.className = 'form-control tag-input-inline';
-    input.placeholder = '输入标签名，回车确认';
-    input.style.cssText = 'width:120px;padding:4px 8px;font-size:12px;border-radius:14px;border:1px solid var(--color-verifying);display:inline-block;vertical-align:middle;';
+    this.renderHeader(title);
+    this.renderIssueBody(issue);
+    this.renderIssueFooter(issue);
+    this.show();
+  },
 
-    // 回车确认
-    input.addEventListener('keydown', function(e) {
+  openDeviceModal(deviceId = null) {
+    this._currentType = 'device';
+    this._currentId = deviceId;
+
+    const device = deviceId ? Store.getDeviceById(deviceId) : null;
+    const title = device ? '编辑设备' : '新增设备';
+
+    this.renderHeader(title);
+    this.renderDeviceBody(device);
+    this.renderDeviceFooter(device);
+    this.show();
+  },
+
+  openAISettingsModal() {
+    this._currentType = 'ai-settings';
+    const settings = Store.getSettings();
+
+    this.renderHeader('AI 诊疗设置');
+    this.renderAISettingsBody(settings);
+    this.renderAISettingsFooter();
+    this.show();
+  },
+
+  renderHeader(title) {
+    document.getElementById('modal-title').textContent = title;
+  },
+
+  renderIssueBody(issue) {
+    const devices = Store.getDevices();
+    const knowledge = Store.getKnowledge();
+
+    const body = document.getElementById('modal-body');
+    body.innerHTML = `
+      <div class="ai-suggestion-box" id="ai-suggestion-box" style="display: none;">
+        <div class="ai-suggestion-header">
+          <svg class="ai-suggestion-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2L14.5 8.5L21 10.5L15.5 14L16.5 20.5L12 17.5L7.5 20.5L8.5 14L3 10.5L9.5 8.5L12 2Z" stroke-linejoin="round"/>
+          </svg>
+          <span class="ai-suggestion-title">AI 智能诊疗建议</span>
+        </div>
+        <div class="ai-suggestion-body" id="ai-suggestion-content"></div>
+        <div class="ai-suggestion-actions" id="ai-suggestion-actions"></div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label required">异常标题</label>
+        <input type="text" class="form-input" id="issue-title" placeholder="简要描述问题" value="${this.escapeHtml(issue?.title || '')}">
+        <button class="ai-analyze-btn" id="btn-ai-analyze" ${!Store.getSettings().aiApiKey ? 'disabled title="请先在设置中配置 AI API Key"' : ''}>
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10 2L11.5 6.5L16 8L11.5 9.5L10 14L8.5 9.5L4 8L8.5 6.5L10 2Z" stroke-linejoin="round"/>
+          </svg>
+          AI 智能诊断
+        </button>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label required">当前阶段</label>
+          <select class="form-select" id="issue-stage">
+            ${STAGE_ORDER.map(stage => `
+              <option value="${stage}" ${issue?.stage === stage ? 'selected' : ''}>${STAGE_CONFIG[stage]?.label || stage}</option>
+            `).join('')}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">负责人</label>
+          <select class="form-select" id="issue-assignee">
+            <option value="">未分配</option>
+            ${ASSIGNEES.map(a => `
+              <option value="${a.name}" data-initial="${a.initial}" ${issue?.assignee === a.name ? 'selected' : ''}>${a.name}</option>
+            `).join('')}
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">关联设备</label>
+        <select class="form-select" id="issue-device">
+          <option value="">请选择设备</option>
+          ${devices.map(d => `
+            <option value="${d.id}" data-name="${this.escapeHtml(d.name)}" ${issue?.deviceId === d.id ? 'selected' : ''}>${this.escapeHtml(d.name)} (${d.id})</option>
+          `).join('')}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">标签</label>
+        <div class="tag-input-container" id="tag-input-container">
+          ${this._editingTags.map(tag => this.renderTagChip(tag)).join('')}
+          <input type="text" class="tag-input" id="tag-input" placeholder="输入标签后按回车添加">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">关联知识库</label>
+        <select class="form-select" id="issue-knowledge">
+          <option value="">暂未关联</option>
+          ${knowledge.map(k => `
+            <option value="${k.id}" ${issue?.knowledgeId === k.id ? 'selected' : ''}>${this.escapeHtml(k.title)}</option>
+          `).join('')}
+        </select>
+        <div class="form-hint">选择对应的知识库方案，方便快速查阅处理方法</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">问题描述</label>
+        <textarea class="form-textarea" id="issue-description" placeholder="详细描述问题现象、复现步骤等..." rows="4">${this.escapeHtml(issue?.description || '')}</textarea>
+      </div>
+    `;
+
+    this.bindIssueEvents();
+  },
+
+  bindIssueEvents() {
+    const tagContainer = document.getElementById('tag-input-container');
+    const tagInput = document.getElementById('tag-input');
+
+    tagInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
-        var tagName = input.value.trim();
-        if (!tagName) { input.remove(); return; }
-        _createTag(tagName, selector, addBtn);
-        input.remove();
-      } else if (e.key === 'Escape') {
-        input.remove();
+        this.addTag(tagInput.value.trim());
+        tagInput.value = '';
+      } else if (e.key === 'Backspace' && !tagInput.value && this._editingTags.length > 0) {
+        this.removeTag(this._editingTags.length - 1);
       }
     });
 
-    // 失焦确认
-    input.addEventListener('blur', function() {
-      var tagName = input.value.trim();
-      if (tagName) {
-        _createTag(tagName, selector, addBtn);
+    tagContainer.addEventListener('click', (e) => {
+      if (e.target === tagContainer || e.target.closest('#tag-input-container')) {
+        tagInput.focus();
       }
-      input.remove();
     });
 
-    selector.insertBefore(input, addBtn);
-    input.focus();
-  }
+    const analyzeBtn = document.getElementById('btn-ai-analyze');
+    if (analyzeBtn) {
+      analyzeBtn.addEventListener('click', () => this.runAIAnalyze());
+    }
+  },
 
-  function _createTag(tagName, selector, addBtn) {
-    // 检查是否已存在
-    var existingTags = selector.querySelectorAll('.tag-item');
-    for (var i = 0; i < existingTags.length; i++) {
-      if (existingTags[i].textContent === tagName) {
-        if (selectedTags.indexOf(tagName) === -1) {
-          selectedTags.push(tagName);
-          existingTags[i].classList.add('active');
+  renderTagChip(tag) {
+    return `
+      <span class="tag-chip" data-tag="${this.escapeHtml(tag)}">
+        ${this.escapeHtml(tag)}
+        <span class="tag-chip-remove" data-tag="${this.escapeHtml(tag)}" aria-label="移除标签">
+          <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M1 1L9 9M9 1L1 9" stroke-linecap="round"/>
+          </svg>
+        </span>
+      </span>
+    `;
+  },
+
+  addTag(tag) {
+    if (!tag || this._editingTags.includes(tag)) return;
+    if (this._editingTags.length >= 10) {
+      Toast.show('最多添加10个标签');
+      return;
+    }
+    this._editingTags.push(tag);
+    this.updateTagChips();
+  },
+
+  removeTag(indexOrTag) {
+    if (typeof indexOrTag === 'number') {
+      this._editingTags.splice(indexOrTag, 1);
+    } else {
+      this._editingTags = this._editingTags.filter(t => t !== indexOrTag);
+    }
+    this.updateTagChips();
+  },
+
+  updateTagChips() {
+    const container = document.getElementById('tag-input-container');
+    if (!container) return;
+    const input = document.getElementById('tag-input');
+    const chips = container.querySelectorAll('.tag-chip');
+    chips.forEach(c => c.remove());
+
+    this._editingTags.forEach(tag => {
+      const chip = document.createElement('span');
+      chip.className = 'tag-chip';
+      chip.dataset.tag = tag;
+      chip.innerHTML = `
+        ${this.escapeHtml(tag)}
+        <span class="tag-chip-remove" data-tag="${this.escapeHtml(tag)}" aria-label="移除标签">
+          <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M1 1L9 9M9 1L1 9" stroke-linecap="round"/>
+          </svg>
+        </span>
+      `;
+      chip.querySelector('.tag-chip-remove').addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.removeTag(chip.dataset.tag);
+      });
+      container.insertBefore(chip, input);
+    });
+  },
+
+  runAIAnalyze() {
+    const title = document.getElementById('issue-title').value.trim();
+    const description = document.getElementById('issue-description').value.trim();
+
+    if (!title) {
+      Toast.show('请先填写异常标题');
+      return;
+    }
+
+    const btn = document.getElementById('btn-ai-analyze');
+    const box = document.getElementById('ai-suggestion-box');
+    const content = document.getElementById('ai-suggestion-content');
+    const actions = document.getElementById('ai-suggestion-actions');
+
+    btn.classList.add('loading');
+    btn.disabled = true;
+    box.style.display = 'block';
+    content.innerHTML = '<p><strong>正在分析中...</strong></p><p>请稍候，AI 正在分析问题...</p>';
+    actions.innerHTML = '';
+
+    AI.diagnose({
+      title: title,
+      description: description,
+      device: document.getElementById('issue-device')?.selectedOptions?.[0]?.dataset?.name || ''
+    }).then(result => {
+      btn.classList.remove('loading');
+      btn.disabled = false;
+
+      let html = '';
+      if (result.tags && result.tags.length) {
+        html += `<p><strong>推荐标签：</strong>${result.tags.join('、')}</p>`;
+      }
+      if (result.stage) {
+        html += `<p><strong>推荐阶段：</strong>${STAGE_CONFIG[result.stage]?.label || result.stage}</p>`;
+      }
+      if (result.suggestion) {
+        html += `<p><strong>可能原因：</strong>${this.escapeHtml(result.suggestion)}</p>`;
+      }
+      if (result.solution) {
+        html += `<p><strong>处理建议：</strong>${this.escapeHtml(result.solution)}</p>`;
+      }
+
+      content.innerHTML = html || '<p>暂无建议</p>';
+
+      actions.innerHTML = `
+        <button class="btn btn-primary" id="btn-apply-ai">应用推荐结果</button>
+        <button class="btn btn-ghost" id="btn-close-ai">关闭</button>
+      `;
+
+      document.getElementById('btn-apply-ai').addEventListener('click', () => {
+        if (result.tags && result.tags.length) {
+          this._editingTags = [...result.tags];
+          this.updateTagChips();
         }
-        return;
-      }
-    }
+        if (result.stage) {
+          document.getElementById('issue-stage').value = result.stage;
+        }
+        box.style.display = 'none';
+        Toast.show('已应用推荐结果', 'success');
+      });
 
-    // 创建新标签元素
-    var span = document.createElement('span');
-    span.className = 'tag-item active';
-    span.textContent = tagName;
-    span.setAttribute('onclick', "Modal.toggleTag('" + tagName.replace(/'/g, "\\'") + "', this)");
-    selectedTags.push(tagName);
-
-    selector.insertBefore(span, addBtn);
-
-    // 同步到 Store
-    Store._syncTags([tagName]);
-  }
-
-  // ========== 保存异常 ==========
-  function saveIssue() {
-    var deviceId = document.getElementById('form-device-id').value.trim();
-    var title = document.getElementById('form-title').value.trim();
-    var stage = document.getElementById('form-stage').value;
-    var assignee = document.getElementById('form-assignee').value.trim();
-    var description = document.getElementById('form-description').value.trim();
-
-    // 校验必填
-    if (!deviceId) {
-      alert('请选择设备');
-      return;
-    }
-    if (!title) {
-      alert('请输入异常现象');
-      return;
-    }
-    if (!assignee) {
-      alert('请输入负责人');
-      return;
-    }
-
-    var issueData = {
-      deviceId: deviceId,
-      title: title,
-      stage: stage,
-      assignee: assignee,
-      tags: selectedTags.slice(),
-      description: description
-    };
-
-    if (currentIssue) {
-      // 编辑模式
-      Store.updateIssue(currentIssue.id, issueData);
-    } else {
-      // 新增模式
-      Store.addIssue(issueData);
-    }
-
-    close();
-  }
-
-  // ========== 保存并推荐方案 ==========
-  function saveAndLink() {
-    saveIssue();
-
-    if (selectedTags.length > 0) {
-      var suggestions = Store.suggestKnowledge(selectedTags);
-      if (suggestions.length > 0) {
-        var msg = '推荐相关处理方案：\n\n';
-        suggestions.forEach(function (item, index) {
-          msg += (index + 1) + '. ' + item.title + ' (解决次数: ' + (item.solveCount || 0) + ')\n';
-        });
-        alert(msg);
-      } else {
-        alert('未找到与当前标签相关的处理方案');
-      }
-    } else {
-      alert('未选择标签，无法推荐相关方案');
-    }
-  }
-
-  // ========== 保存知识库方案 ==========
-  function saveKnowledge() {
-    var title = document.getElementById('form-knowledge-title').value.trim();
-    var content = document.getElementById('form-knowledge-content').value.trim();
-    var devicesStr = document.getElementById('form-knowledge-devices').value.trim();
-    var status = document.getElementById('form-knowledge-status').value;
-
-    // 校验必填
-    if (!title) {
-      alert('请输入方案标题');
-      return;
-    }
-    if (!content) {
-      alert('请输入处理步骤');
-      return;
-    }
-
-    var relatedDevices = [];
-    if (devicesStr) {
-      relatedDevices = devicesStr.split(/[,，]/).map(function (d) { return d.trim(); }).filter(function (d) { return d; });
-    }
-
-    var knowledgeData = {
-      title: title,
-      content: content,
-      relatedDevices: relatedDevices,
-      status: status,
-      tags: selectedTags.slice(),
-      author: '当前用户',
-      solveCount: 0,
-      likes: 0,
-      comments: 0
-    };
-
-    Store.addKnowledge(knowledgeData);
-    close();
-  }
-
-  // ========== 保存设备 ==========
-  function saveDevice() {
-    var deviceId = document.getElementById('form-device-code').value.trim();
-    var name = document.getElementById('form-device-name').value.trim();
-    var model = document.getElementById('form-device-model').value.trim();
-    var location = document.getElementById('form-device-location').value.trim();
-    var status = document.getElementById('form-device-status').value;
-
-    if (!deviceId) {
-      alert('请输入设备编号');
-      return;
-    }
-    if (!name) {
-      alert('请输入设备名称');
-      return;
-    }
-
-    // 检查是否是编辑模式（通过判断 input 是否 disabled）
-    var codeInput = document.getElementById('form-device-code');
-    var isEdit = codeInput && codeInput.disabled;
-
-    var deviceData = {
-      deviceId: deviceId,
-      name: name,
-      model: model,
-      location: location,
-      status: status
-    };
-
-    if (isEdit) {
-      Store.updateDevice(deviceId, deviceData);
-    } else {
-      var result = Store.addDevice(deviceData);
-      if (!result.success) {
-        alert(result.message);
-        return;
-      }
-    }
-
-    close();
-  }
-
-  // ========== 为指定设备打开新增异常弹窗 ==========
-  function openForDevice(deviceId) {
-    currentIssue = null;
-    selectedTags = [];
-    renderIssueForm(false);
-
-    // 预填充设备编号并禁用选择
-    var select = document.getElementById('form-device-id');
-    if (select) {
-      select.value = deviceId;
-      select.disabled = true;
-    }
-
-    overlay.style.display = 'flex';
-    requestAnimationFrame(function () {
-      overlay.classList.add('show');
+      document.getElementById('btn-close-ai').addEventListener('click', () => {
+        box.style.display = 'none';
+      });
+    }).catch(err => {
+      btn.classList.remove('loading');
+      btn.disabled = false;
+      content.innerHTML = `<p style="color: var(--stage-danger);"><strong>分析失败：</strong>${this.escapeHtml(err.message || '未知错误')}</p>`;
+      actions.innerHTML = `<button class="btn btn-ghost" id="btn-close-ai">关闭</button>`;
+      document.getElementById('btn-close-ai').addEventListener('click', () => {
+        box.style.display = 'none';
+      });
     });
-  }
+  },
 
-  // ========== 遮罩点击关闭 ==========
-  overlay.addEventListener('click', function (e) {
-    if (e.target === overlay) {
-      close();
+  renderIssueFooter(issue) {
+    const footer = document.getElementById('modal-footer');
+    footer.innerHTML = `
+      ${issue ? `<button class="btn btn-ghost" id="btn-delete-issue" style="margin-right: auto; color: var(--stage-danger);">删除</button>` : ''}
+      <button class="btn btn-ghost" id="btn-cancel">取消</button>
+      <button class="btn btn-primary" id="btn-save">保存</button>
+    `;
+
+    document.getElementById('btn-cancel').addEventListener('click', () => this.close());
+    document.getElementById('btn-save').addEventListener('click', () => this.saveIssue());
+
+    const deleteBtn = document.getElementById('btn-delete-issue');
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', () => this.deleteIssue());
     }
-  });
+  },
 
-  // ========== ESC 键关闭 ==========
-  document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' || e.keyCode === 27) {
-      if (overlay.style.display !== 'none') {
-        close();
+  saveIssue() {
+    const title = document.getElementById('issue-title').value.trim();
+    if (!title) {
+      Toast.show('请填写异常标题');
+      return;
+    }
+
+    const stage = document.getElementById('issue-stage').value;
+    const assigneeSelect = document.getElementById('issue-assignee');
+    const assignee = assigneeSelect.value;
+    const assigneeInitial = assigneeSelect.selectedOptions[0]?.dataset?.initial || '';
+    const deviceSelect = document.getElementById('issue-device');
+    const deviceId = deviceSelect.value;
+    const device = deviceSelect.selectedOptions[0]?.dataset?.name || '';
+    const description = document.getElementById('issue-description').value.trim();
+    const knowledgeId = document.getElementById('issue-knowledge').value || null;
+
+    const data = {
+      title,
+      stage,
+      assignee: assignee || null,
+      assigneeInitial: assigneeInitial || null,
+      deviceId: deviceId || null,
+      device: device || '',
+      tags: [...this._editingTags],
+      description,
+      knowledgeId
+    };
+
+    if (this._currentId) {
+      Store.updateIssue(this._currentId, data);
+      Toast.show('已更新', 'success');
+    } else {
+      Store.addIssue(data);
+      Toast.show('已添加', 'success');
+    }
+
+    this.close();
+  },
+
+  deleteIssue() {
+    if (!this._currentId) return;
+
+    Dialog.confirm({
+      title: '删除异常',
+      message: '确定要删除这条异常记录吗？此操作不可撤销。',
+      type: 'danger',
+      confirmText: '确认删除',
+      onConfirm: () => {
+        Store.deleteIssue(this._currentId);
+        Toast.show('已删除', 'success');
+        this.close();
       }
-    }
-  });
+    });
+  },
 
-  // ========== 公开 API ==========
-  return {
-    open: open,
-    close: close,
-    toggleTag: toggleTag,
-    addCustomTag: addCustomTag,
-    saveIssue: saveIssue,
-    saveAndLink: saveAndLink,
-    saveKnowledge: saveKnowledge,
-    saveDevice: saveDevice,
-    openForDevice: openForDevice
-  };
-})();
+  renderDeviceBody(device) {
+    const body = document.getElementById('modal-body');
+    body.innerHTML = `
+      <div class="form-group">
+        <label class="form-label required">设备名称</label>
+        <input type="text" class="form-input" id="device-name" placeholder="例如：HUAWEI WATCH GT 4" value="${this.escapeHtml(device?.name || '')}">
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label required">设备型号</label>
+          <input type="text" class="form-input" id="device-model" placeholder="例如：TET-B19" value="${this.escapeHtml(device?.model || '')}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">设备类型</label>
+          <select class="form-select" id="device-type">
+            ${DEVICE_TYPES.map(t => `
+              <option value="${t}" ${device?.type === t ? 'selected' : ''}>${t}</option>
+            `).join('')}
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">出厂时间</label>
+          <input type="date" class="form-input" id="device-date" value="${device?.manufactureDate || ''}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">设备状态</label>
+          <select class="form-select" id="device-status">
+            ${Object.entries(DEVICE_STATUS).map(([key, val]) => `
+              <option value="${key}" ${device?.status === key ? 'selected' : ''}>${val.label}</option>
+            `).join('')}
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">备注</label>
+        <textarea class="form-textarea" id="device-note" placeholder="补充说明..." rows="3">${this.escapeHtml(device?.note || '')}</textarea>
+      </div>
+    `;
+  },
+
+  renderDeviceFooter(device) {
+    const footer = document.getElementById('modal-footer');
+    footer.innerHTML = `
+      ${device ? `<button class="btn btn-ghost" id="btn-delete-device" style="margin-right: auto; color: var(--stage-danger);">删除</button>` : ''}
+      <button class="btn btn-ghost" id="btn-cancel">取消</button>
+      <button class="btn btn-primary" id="btn-save">保存</button>
+    `;
+
+    document.getElementById('btn-cancel').addEventListener('click', () => this.close());
+    document.getElementById('btn-save').addEventListener('click', () => this.saveDevice());
+
+    const deleteBtn = document.getElementById('btn-delete-device');
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', () => {
+        Devices.deleteDevice(this._currentId);
+        this.close();
+      });
+    }
+  },
+
+  saveDevice() {
+    const name = document.getElementById('device-name').value.trim();
+    if (!name) {
+      Toast.show('请填写设备名称');
+      return;
+    }
+
+    const model = document.getElementById('device-model').value.trim();
+    if (!model) {
+      Toast.show('请填写设备型号');
+      return;
+    }
+
+    const data = {
+      name,
+      model,
+      type: document.getElementById('device-type').value,
+      manufactureDate: document.getElementById('device-date').value || null,
+      status: document.getElementById('device-status').value,
+      note: document.getElementById('device-note').value.trim()
+    };
+
+    if (this._currentId) {
+      Store.updateDevice(this._currentId, data);
+      Toast.show('已更新', 'success');
+    } else {
+      Store.addDevice(data);
+      Toast.show('已添加', 'success');
+    }
+
+    this.close();
+  },
+
+  renderAISettingsBody(settings) {
+    const body = document.getElementById('modal-body');
+    body.innerHTML = `
+      <div class="settings-section">
+        <div class="settings-section-title">API 配置</div>
+        <div class="form-group">
+          <label class="form-label">豆包 API Key</label>
+          <input type="password" class="form-input" id="ai-api-key" placeholder="请输入 API Key" value="${this.escapeHtml(settings.aiApiKey || '')}">
+          <div class="form-hint">API Key 仅保存在本地浏览器，不会上传到任何服务器。</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">模型选择</label>
+          <select class="form-select" id="ai-model">
+            <option value="doubao-pro-32k" ${settings.aiModel === 'doubao-pro-32k' ? 'selected' : ''}>Doubao-pro-32k（推荐）</option>
+            <option value="doubao-pro-128k" ${settings.aiModel === 'doubao-pro-128k' ? 'selected' : ''}>Doubao-pro-128k</option>
+            <option value="doubao-lite-32k" ${settings.aiModel === 'doubao-lite-32k' ? 'selected' : ''}>Doubao-lite-32k</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-section-title">使用说明</div>
+        <div style="font-size: 13px; line-height: 1.7; color: var(--text-secondary);">
+          <p style="margin-bottom: 8px;">1. 在新增或编辑异常时，点击「AI 智能诊断」按钮</p>
+          <p style="margin-bottom: 8px;">2. AI 会自动分析问题，推荐标签、阶段和解决方案</p>
+          <p style="margin-bottom: 8px;">3. 点击「应用推荐结果」一键填充到表单</p>
+          <p>4. API Key 请在火山引擎方舟平台获取</p>
+        </div>
+      </div>
+    `;
+  },
+
+  renderAISettingsFooter() {
+    const footer = document.getElementById('modal-footer');
+    footer.innerHTML = `
+      <button class="btn btn-ghost" id="btn-cancel">取消</button>
+      <button class="btn btn-primary" id="btn-save-settings">保存设置</button>
+    `;
+
+    document.getElementById('btn-cancel').addEventListener('click', () => this.close());
+    document.getElementById('btn-save-settings').addEventListener('click', () => {
+      const apiKey = document.getElementById('ai-api-key').value.trim();
+      const model = document.getElementById('ai-model').value;
+      Store.updateSettings({
+        aiApiKey: apiKey,
+        aiModel: model,
+        aiEnabled: !!apiKey
+      });
+      Toast.show('设置已保存', 'success');
+      this.close();
+    });
+  },
+
+  show() {
+    document.getElementById('modal-overlay').classList.add('show');
+    const firstInput = document.querySelector('.modal-body input, .modal-body select, .modal-body textarea');
+    if (firstInput) {
+      setTimeout(() => firstInput.focus(), 100);
+    }
+  },
+
+  close() {
+    document.getElementById('modal-overlay').classList.remove('show');
+    this._currentType = null;
+    this._currentId = null;
+    this._editingTags = [];
+  },
+
+  escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+};
