@@ -202,7 +202,11 @@ const Dashboard = (function() {
         render();
         
         if (window.App && typeof window.App.showToast === 'function') {
+
+        
             window.App.showToast(`已将设备移至「${STAGES[targetStage].label}」`, 'success');
+
+        
         }
     }
 
