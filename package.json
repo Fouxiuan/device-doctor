@@ -1,0 +1,10 @@
+{
+  "name": "device-doctor",
+  "version": "1.0.0",
+  "description": "设备诊疗师 — 设备异常看板与知识库管理工具",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/"
+  },
+  "license": "MIT"
+}
