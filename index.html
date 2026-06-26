@@ -1,54 +1,376 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>设备诊疗师 — 异常闭环与知识管家</title>
-  <link rel="stylesheet" href="css/main.css">
-  <link rel="stylesheet" href="css/dashboard.css">
-  <link rel="stylesheet" href="css/knowledge.css">
-  <link rel="stylesheet" href="css/modal.css">
-  <link rel="stylesheet" href="css/devices.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>设备诊疗师 — 异常闭环与知识管家</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/devices.css">
+    <link rel="stylesheet" href="css/knowledge.css">
+    <link rel="stylesheet" href="css/modal.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 </head>
 <body>
-  <!-- 导航栏 -->
-  <header class="app-header">
-    <div class="header-left">
-      <span class="logo">📊 设备诊疗师</span>
+    <div class="app-container">
+        <nav class="navbar">
+            <div class="nav-left">
+                <div class="logo">
+                    <svg class="logo-icon" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <rect x="2" y="6" width="28" height="22" rx="3" stroke="currentColor" stroke-width="2"/>
+                        <path d="M8 6V4C8 2.89543 8.89543 2 10 2H22C23.1046 2 24 2.89543 24 4V6" stroke="currentColor" stroke-width="2"/>
+                        <circle cx="16" cy="17" r="5" stroke="currentColor" stroke-width="2"/>
+                        <path d="M16 14V20M13 17H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        <path d="M6 28L10 24M26 28L22 24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                    <span class="logo-text">设备诊疗师</span>
+                </div>
+            </div>
+            <div class="nav-center">
+                <button class="nav-tab active" data-page="dashboard" aria-label="状态看板" aria-current="page">
+                    <svg class="nav-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                        <rect x="2" y="2" width="6" height="8" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+                        <rect x="12" y="2" width="6" height="12" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+                        <rect x="2" y="14" width="6" height="4" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+                        <rect x="12" y="18" width="6" height="0" rx="0" stroke="currentColor" stroke-width="1.5"/>
+                    </svg>
+                    <span>状态看板</span>
+                </button>
+                <button class="nav-tab" data-page="devices" aria-label="设备管理">
+                    <svg class="nav-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                        <rect x="2" y="5" width="16" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/>
+                        <path d="M6 9H14M6 12H11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                        <circle cx="15" cy="15" r="3" stroke="currentColor" stroke-width="1.5"/>
+                    </svg>
+                    <span>设备管理</span>
+                </button>
+                <button class="nav-tab" data-page="knowledge" aria-label="知识库">
+                    <svg class="nav-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                        <path d="M4 4C4 2.89543 4.89543 2 6 2H14C15.1046 2 16 2.89543 16 4V18L10 15L4 18V4Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+                    </svg>
+                    <span>知识库</span>
+                </button>
+            </div>
+            <div class="nav-right">
+                <button class="btn btn-ghost btn-icon" id="btn-ai-settings" title="AI 诊疗设置" aria-label="AI 诊疗设置">
+                    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                        <path d="M10 2L11.5 6.5L16 8L11.5 9.5L10 14L8.5 9.5L4 8L8.5 6.5L10 2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+                        <circle cx="15" cy="15" r="2" stroke="currentColor" stroke-width="1.5"/>
+                    </svg>
+                </button>
+                <button class="btn btn-ghost btn-icon" id="btn-import" title="导入数据" aria-label="导入数据">
+                    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                        <path d="M10 3V13M10 13L6 9M10 13L14 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M3 17H17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                </button>
+                <button class="btn btn-ghost btn-icon" id="btn-export" title="导出数据" aria-label="导出数据">
+                    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                        <path d="M10 17V7M10 7L6 11M10 7L14 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M3 3H17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                </button>
+                <button class="btn btn-primary" id="btn-add-issue">
+                    <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                        <path d="M10 4V16M4 10H16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                    <span>新增异常</span>
+                </button>
+            </div>
+        </nav>
+
+        <main class="main-content">
+            <section class="page page-dashboard active" id="page-dashboard">
+                <div class="dashboard-header">
+                    <h1 class="page-title">设备异常看板</h1>
+                    <p class="page-subtitle">实时追踪设备处理进度，一屏总览全流程</p>
+                </div>
+
+                <div class="stats-row">
+                    <div class="stat-card summary-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, var(--primary) 0%, #7c8cff 100%); color: white;">
+                            <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                <path d="M18 2H6C4.89543 2 4 2.89543 4 4V20C4 21.1046 4.89543 22 6 22H18C19.1046 22 20 21.1046 20 20V4C20 2.89543 19.1046 2 18 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M16 10H8M16 14H8M16 18H8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                        </div>
+                        <div class="stat-info">
+                            <div class="stat-label">数据概览</div>
+                            <div class="summary-grid">
+                                <div class="summary-item">
+                                    <span class="summary-value summary-issues">0</span>
+                                    <span class="summary-label">异常总数</span>
+                                </div>
+                                <div class="summary-item">
+                                    <span class="summary-value summary-devices">0</span>
+                                    <span class="summary-label">设备总数</span>
+                                </div>
+                                <div class="summary-item">
+                                    <span class="summary-value summary-rate">0</span>
+                                    <span class="summary-label">解决率%</span>
+                                </div>
+                                <div class="summary-item">
+                                    <span class="summary-value summary-time">0</span>
+                                    <span class="summary-label">平均耗时</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-card stage-verifying" data-stage="verifying" role="button" tabindex="0" aria-label="筛选 数据校对 阶段">
+                        <div class="stat-icon">
+                            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+                                <path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                        <div class="stat-info">
+                            <div class="stat-label">数据校对</div>
+                            <div class="stat-count" id="count-verifying">0</div>
+                        </div>
+                    </div>
+                    <div class="stat-card stage-detecting" data-stage="detecting" role="button" tabindex="0" aria-label="筛选 检测中 阶段">
+                        <div class="stat-icon">
+                            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+                                <path d="M12 6V12L16 14M22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                        <div class="stat-info">
+                            <div class="stat-label">检测中</div>
+                            <div class="stat-count" id="count-detecting">0</div>
+                        </div>
+                    </div>
+                    <div class="stat-card stage-normal" data-stage="normal" role="button" tabindex="0" aria-label="筛选 判定正常 阶段">
+                        <div class="stat-icon">
+                            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+                                <path d="M9 12L11 14L15 10M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                        <div class="stat-info">
+                            <div class="stat-label">判定正常</div>
+                            <div class="stat-count" id="count-normal">0</div>
+                        </div>
+                    </div>
+                    <div class="stat-card stage-danger" data-stage="danger" role="button" tabindex="0" aria-label="筛选 判定危险 阶段">
+                        <div class="stat-icon">
+                            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+                                <path d="M12 9V13M12 17H12.01M10.29 3.86L1.82 18C1.64245 18.309 1.54825 18.6524 1.54797 19.001C1.54769 19.3496 1.64111 19.6934 1.818 20C2.01133 20.3043 2.28262 20.552 2.606 20.72C2.92938 20.888 3.29707 20.9728 3.67 20.97H20.33C20.7029 20.9728 21.0706 20.888 21.394 20.72C21.7174 20.552 21.9887 20.3043 22.182 20C22.3589 19.6934 22.4523 19.3496 22.452 19.001C22.4518 18.6524 22.3575 18.309 22.18 18L13.71 3.86C13.5274 3.54642 13.2684 3.28151 12.9526 3.0866C12.6369 2.89169 12.2715 2.77096 11.895 2.73293C11.5185 2.69489 11.1388 2.74038 10.7845 2.86582C10.4302 2.99126 10.1087 3.19368 9.845 3.46L9.84 3.46C9.57758 3.73353 9.37967 4.06076 9.25886 4.41992C9.13805 4.77909 9.09638 5.16261 9.1365 5.5402L9.29 7L10.29 3.86Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                        <div class="stat-info">
+                            <div class="stat-label">判定危险</div>
+                            <div class="stat-count" id="count-danger">0</div>
+                        </div>
+                    </div>
+                    <div class="stat-card stage-wearing" data-stage="wearing" role="button" tabindex="0" aria-label="筛选 穿戴测试 阶段">
+                        <div class="stat-icon">
+                            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+                                <path d="M20 7H4C2.89543 7 2 7.89543 2 9V19C2 20.1046 2.89543 21 4 21H20C21.1046 21 22 20.1046 22 19V9C22 7.89543 21.1046 7 20 7Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M16 3H8L7 7H17L16 3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M9 13H15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                        </div>
+                        <div class="stat-info">
+                            <div class="stat-label">穿戴测试</div>
+                            <div class="stat-count" id="count-wearing">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="kanban-container">
+                    <div class="kanban-column" data-stage="verifying">
+                        <div class="kanban-header">
+                            <span class="kanban-dot dot-verifying"></span>
+                            <span class="kanban-title">数据校对</span>
+                            <span class="kanban-count" id="kanban-count-verifying">0</span>
+                        </div>
+                        <div class="kanban-cards" data-stage="verifying" id="kanban-verifying">
+                        </div>
+                    </div>
+
+                    <div class="kanban-column" data-stage="detecting">
+                        <div class="kanban-header">
+                            <span class="kanban-dot dot-detecting"></span>
+                            <span class="kanban-title">检测中</span>
+                            <span class="kanban-count" id="kanban-count-detecting">0</span>
+                        </div>
+                        <div class="kanban-cards" data-stage="detecting" id="kanban-detecting">
+                        </div>
+                    </div>
+
+                    <div class="kanban-column" data-stage="normal">
+                        <div class="kanban-header">
+                            <span class="kanban-dot dot-normal"></span>
+                            <span class="kanban-title">判定正常</span>
+                            <span class="kanban-count" id="kanban-count-normal">0</span>
+                        </div>
+                        <div class="kanban-cards" data-stage="normal" id="kanban-normal">
+                        </div>
+                    </div>
+
+                    <div class="kanban-column" data-stage="danger">
+                        <div class="kanban-header">
+                            <span class="kanban-dot dot-danger"></span>
+                            <span class="kanban-title">判定危险</span>
+                            <span class="kanban-count" id="kanban-count-danger">0</span>
+                        </div>
+                        <div class="kanban-cards" data-stage="danger" id="kanban-danger">
+                        </div>
+                    </div>
+
+                    <div class="kanban-column" data-stage="wearing">
+                        <div class="kanban-header">
+                            <span class="kanban-dot dot-wearing"></span>
+                            <span class="kanban-title">穿戴测试</span>
+                            <span class="kanban-count" id="kanban-count-wearing">0</span>
+                        </div>
+                        <div class="kanban-cards" data-stage="wearing" id="kanban-wearing">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="page page-devices" id="page-devices">
+                <div class="devices-header">
+                    <div>
+                        <h1 class="page-title">设备管理</h1>
+                        <p class="page-subtitle">管理设备型号与资产信息，一屏掌握全部设备</p>
+                    </div>
+                    <button class="btn btn-primary" id="btn-add-device">
+                        <svg aria-hidden="true" width="16" height="16" viewBox="0 0 20 20" fill="none">
+                            <path d="M10 4V16M4 10H16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                        <span>新增设备</span>
+                    </button>
+                </div>
+
+                <div class="devices-toolbar">
+                    <div class="search-box devices-search">
+                        <svg aria-hidden="true" class="search-icon" viewBox="0 0 20 20" fill="none">
+                            <path d="M9 17C13.4183 17 17 13.4183 17 9C17 4.58172 13.4183 1 9 1C4.58172 1 1 4.58172 1 9C1 13.4183 4.58172 17 9 17Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M14.5 14.5L19 19" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <input type="text" id="device-search" placeholder="搜索设备编号、名称、型号、类型…" aria-label="搜索设备" name="device-search" autocomplete="off">
+                    </div>
+                    <div class="devices-stats">
+                        <span class="device-stat-badge">
+                            共 <strong id="device-total-count">0</strong> 台设备
+                        </span>
+                    </div>
+                </div>
+
+                <div class="devices-grid" id="devices-grid">
+                </div>
+            </section>
+
+            <section class="page page-knowledge" id="page-knowledge">
+                <div class="kb-main-layout">
+                    <aside class="kb-sidebar" id="kb-sidebar">
+                        <div class="kb-sidebar-header">
+                            <div class="kb-sidebar-title">文档目录</div>
+                            <button class="kb-sidebar-add" id="btn-add-category" title="新增大类" aria-label="新增分类">
+                                <svg aria-hidden="true" width="16" height="16" viewBox="0 0 20 20" fill="none">
+                                    <path d="M10 4V16M4 10H16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="kb-sidebar-search">
+                            <svg aria-hidden="true" class="kb-sidebar-search-icon" viewBox="0 0 20 20" fill="none">
+                                <path d="M9 17C13.4183 17 17 13.4183 17 9C17 4.58172 13.4183 1 9 1C4.58172 1 1 4.58172 1 9C1 13.4183 4.58172 17 9 17Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M14.5 14.5L19 19" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <input type="text" id="knowledge-search" placeholder="搜索文档…" aria-label="搜索文档" name="knowledge-search" autocomplete="off">
+                        </div>
+                        <div class="kb-sidebar-tags">
+                            <span class="kb-sidebar-tags-label">标签：</span>
+                            <div class="kb-sidebar-tag-list" id="tag-list">
+                            </div>
+                        </div>
+                        <div class="kb-categories" id="kb-categories">
+                        </div>
+                    </aside>
+                    <main class="kb-content">
+                        <div class="kb-content-header">
+                            <div class="kb-content-title-wrap">
+                                <h1 class="kb-content-title" id="kb-doc-title">选择一篇文档开始阅读</h1>
+                                <div class="kb-content-meta" id="kb-doc-meta">
+                                </div>
+                            </div>
+                            <div class="kb-content-actions">
+                                <button class="btn btn-ghost kb-mode-toggle" id="kb-toggle-edit">
+                                    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+                                        <path d="M4 16V18H6L14.5 9.5L12.5 7.5L4 16Z"/>
+                                        <path d="M14 5.5L16 3.5L18 5.5L16 7.5L14 5.5Z"/>
+                                    </svg>
+                                    编辑
+                                </button>
+                                <button class="btn btn-primary" id="btn-add-doc">
+                                    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 20 20" fill="none">
+                                        <path d="M10 4V16M4 10H16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                    </svg>
+                                    <span>新建文档</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="kb-doc-body" id="kb-doc-body">
+                            <div class="kb-doc-empty">
+                                <svg aria-hidden="true" class="kb-doc-empty-icon" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.5">
+                                    <path d="M12 8h32l12 12v36H12z" rx="3"/>
+                                    <path d="M44 8v12h12"/>
+                                    <path d="M20 28h24M20 36h20M20 44h16" stroke-linecap="round"/>
+                                </svg>
+                                <div class="kb-doc-empty-title">从左侧选择一篇文档</div>
+                                <div class="kb-doc-empty-desc">或点击右上角「新建文档」开始创作</div>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            </section>
+        </main>
     </div>
-    <nav class="header-nav">
-      <a href="#dashboard" class="nav-link active" data-view="dashboard">状态看板</a>
-      <a href="#knowledge" class="nav-link" data-view="knowledge">知识库</a>
-      <a href="#devices" class="nav-link" data-view="devices">设备管理</a>
-    </nav>
-    <div class="header-actions">
-      <button id="btn-add-issue" class="btn btn-primary">+ 新增异常</button>
-      <button id="btn-add-device" class="btn btn-primary">+ 新增设备</button>
-      <button id="btn-export" class="btn btn-outline">导出数据</button>
-      <button id="btn-import" class="btn btn-outline">导入数据</button>
-      <input type="file" id="file-import" accept=".json" style="display:none">
+
+    <div class="modal-overlay" id="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div class="modal" id="modal">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modal-title">新增异常</h3>
+                <button class="modal-close" id="modal-close" aria-label="关闭对话框">
+                    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                        <path d="M4 4L16 16M16 4L4 16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body" id="modal-body">
+            </div>
+            <div class="modal-footer" id="modal-footer">
+            </div>
+        </div>
     </div>
-  </header>
 
-  <!-- 主内容区 -->
-  <main class="app-main">
-    <section id="view-dashboard" class="view active"></section>
-    <section id="view-knowledge" class="view"></section>
-    <section id="view-devices" class="view"></section>
-  </main>
+    <div class="tour-overlay" id="tour-overlay" style="display: none;">
+        <div class="tour-tooltip" id="tour-tooltip">
+            <div class="tour-arrow"></div>
+            <div class="tour-content">
+                <div class="tour-title" id="tour-title"></div>
+                <div class="tour-desc" id="tour-desc"></div>
+                <div class="tour-nav">
+                    <button class="btn btn-ghost tour-prev" id="tour-prev" style="display: none;">上一步</button>
+                    <button class="btn btn-primary tour-next" id="tour-next">下一步</button>
+                    <button class="btn btn-ghost tour-skip" id="tour-skip">跳过引导</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-  <!-- 弹窗容器 -->
-  <div id="modal-overlay" class="modal-overlay" style="display:none">
-    <div id="modal-container" class="modal-container"></div>
-  </div>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  <!-- JS 模块（按依赖顺序加载） -->
-  <script src="js/data.js"></script>
-  <script src="js/store.js"></script>
-  <script src="js/modal.js"></script>
-  <script src="js/dashboard.js"></script>
-  <script src="js/knowledge.js"></script>
-  <script src="js/devices.js"></script>
-  <script src="js/app.js"></script>
+    <input type="file" id="file-input" accept=".json" style="display:none;" aria-label="选择导入文件" name="file-import">
+
+    <script src="js/data.js"></script>
+    <script src="js/store.js"></script>
+    <script src="js/dialog.js"></script>
+    <script src="js/ai.js"></script>
+    <script src="js/dashboard.js"></script>
+    <script src="js/devices.js"></script>
+    <script src="js/knowledge.js"></script>
+    <script src="js/modal.js"></script>
+    <script src="js/app.js"></script>
 </body>
 </html>
