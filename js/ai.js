@@ -12,8 +12,6 @@ const AIDoctor = (function() {
         { id: 'doubao-seed-2-0-pro-260215',  label: 'Doubao-Seed-2.0-Pro（推荐，旗舰稳定版）' },
         { id: 'doubao-seed-2-0-mini-260428', label: 'Doubao-Seed-2.0-Mini（轻量快速版）' },
         { id: 'doubao-seed-2-0-lite-260428', label: 'Doubao-Seed-2.0-Lite（超轻量版）' },
-        { id: 'doubao-1-5-pro-32k-250115',   label: 'Doubao-1.5-Pro-32k（往期版本）' },
-        { id: 'doubao-1-5-lite-32k-250115',  label: 'Doubao-1.5-Lite-32k（往期版本）' },
     ];
     const DEFAULT_MODEL = MODELS[0].id;
 
