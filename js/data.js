@@ -227,7 +227,22 @@ const DEMO_DATA = {
         "续航",
         "按键",
         "同步",
-        "App"
+        "App",
+        "测试样机",
+        "血氧",
+        "长续航",
+        "量产机",
+        "MicroLED",
+        "AR显示",
+        "返修",
+        "ECG",
+        "心电监测",
+        "运动款",
+        "电池老化",
+        "退役",
+        "工程测试",
+        "物理按键",
+        "开发者版"
     ],
     devices: [
         {
@@ -238,6 +253,7 @@ const DEMO_DATA = {
             type: "穿戴设备",
             productionDatetime: "2026-01-15T08:30",
             status: "active",
+            tags: ["温度传感器", "测试样机"],
             remark: "首批测试样机，搭载温度传感器 v2.0"
         },
         {
@@ -248,6 +264,7 @@ const DEMO_DATA = {
             type: "穿戴设备",
             productionDatetime: "2026-02-20T14:15",
             status: "active",
+            tags: ["血氧", "长续航"],
             remark: "长续航版本，支持血氧监测"
         },
         {
@@ -258,6 +275,7 @@ const DEMO_DATA = {
             type: "穿戴设备",
             productionDatetime: "2026-01-15T09:45",
             status: "active",
+            tags: ["量产机", "蓝牙"],
             remark: "第二批量产机，固件版本 v2.3.1"
         },
         {
@@ -268,6 +286,7 @@ const DEMO_DATA = {
             type: "AR设备",
             productionDatetime: "2026-03-10T11:20",
             status: "active",
+            tags: ["MicroLED", "AR显示"],
             remark: "MicroLED 显示屏，支持心率投影"
         },
         {
@@ -278,6 +297,7 @@ const DEMO_DATA = {
             type: "穿戴设备",
             productionDatetime: "2026-01-20T16:00",
             status: "maintenance",
+            tags: ["光学传感器", "返修"],
             remark: "光学传感器待校准，已返厂维修"
         },
         {
@@ -288,6 +308,7 @@ const DEMO_DATA = {
             type: "穿戴设备",
             productionDatetime: "2026-02-28T10:30",
             status: "active",
+            tags: ["ECG", "心电监测"],
             remark: "磁吸充电接口，支持 ECG"
         },
         {
@@ -298,6 +319,7 @@ const DEMO_DATA = {
             type: "穿戴设备",
             productionDatetime: "2026-04-05T13:45",
             status: "active",
+            tags: ["GPS", "运动款"],
             remark: "专业运动款，双频 GPS + 北斗"
         },
         {
@@ -308,6 +330,7 @@ const DEMO_DATA = {
             type: "穿戴设备",
             productionDatetime: "2026-01-18T15:10",
             status: "retired",
+            tags: ["电池老化", "退役"],
             remark: "电池老化，已退役用作备件"
         },
         {
@@ -318,6 +341,7 @@ const DEMO_DATA = {
             type: "穿戴设备",
             productionDatetime: "2026-02-10T09:00",
             status: "active",
+            tags: ["工程测试", "物理按键"],
             remark: "工程测试版，物理按键款"
         },
         {
@@ -328,6 +352,7 @@ const DEMO_DATA = {
             type: "AR设备",
             productionDatetime: "2026-03-15T14:30",
             status: "active",
+            tags: ["开发者版", "AR显示"],
             remark: "开发者版本，支持自定义 App"
         }
     ],

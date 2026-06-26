@@ -33,11 +33,25 @@ const Store = (function() {
             if (merged.devices && Array.isArray(merged.devices)) {
                 let migrated = false;
                 merged.devices = merged.devices.map(d => {
-                    if (d.purchaseDate !== undefined && d.productionDatetime === undefined) {
+                    const patched = { ...d };
+                    // 旧字段 purchaseDate 迁移到 productionDatetime
+                    if (patched.purchaseDate !== undefined && patched.productionDatetime === undefined) {
+                        patched.productionDatetime = patched.purchaseDate;
                         migrated = true;
-                        return { ...d, productionDatetime: d.purchaseDate };
                     }
-                    return d;
+                    // 旧数据可能缺少 name（显示为"未命名设备"），从 DEMO_DATA 按 deviceId 回填
+                    if ((!patched.name || !patched.name.trim()) && patched.deviceId) {
+                        const demo = (DEMO_DATA.devices || []).find(dd => dd.deviceId === patched.deviceId);
+                        if (demo && demo.name) {
+                            patched.name = demo.name;
+                            migrated = true;
+                        }
+                    }
+                    // 确保所有设备都有 tags 数组
+                    if (!Array.isArray(patched.tags)) {
+                        patched.tags = [];
+                    }
+                    return patched;
                 });
                 if (migrated) {
                     saveAll(merged);
@@ -279,7 +293,7 @@ const Store = (function() {
 
         data.knowledgeCategories = data.knowledgeCategories.filter(c => c.id !== id);
 
-        // 把被删分类里的文档迁移到“未分类”组，避免文档从侧边栏消失
+        // 把被删分类里的文档迁移到"未分类"组，避免文档从侧边栏消失
         if (orphanDocs.length > 0 && id !== UNCATEGORIZED_ID) {
             const uncat = ensureUncategorized(data);
             orphanDocs.forEach(docId => {
@@ -303,7 +317,7 @@ const Store = (function() {
         });
     }
 
-    // 把文档移动到指定分类；categoryId 为 null 时移入“未分类”组
+    // 把文档移动到指定分类；categoryId 为 null 时移入"未分类"组
     function setDocumentCategory(docId, categoryId) {
         const data = getAll();
         if (!data.knowledgeCategories) data.knowledgeCategories = [];
@@ -518,7 +532,7 @@ const Store = (function() {
     function addDevice(device) {
         const data = getAll();
         if (!data.devices) data.devices = [];
-        
+
         if (!device.id) {
             const maxNum = data.devices.reduce((max, d) => {
                 const num = parseInt(d.id.replace('DEV-', ''), 10);
@@ -529,7 +543,19 @@ const Store = (function() {
         if (!device.status) {
             device.status = 'active';
         }
-        
+        if (!Array.isArray(device.tags)) {
+            device.tags = [];
+        }
+
+        // 同步设备标签到全局 tags 数组，保证标签筛选器可见
+        if (device.tags.length > 0) {
+            device.tags.forEach(tag => {
+                if (!data.tags.includes(tag)) {
+                    data.tags.push(tag);
+                }
+            });
+        }
+
         data.devices.unshift(device);
         saveAll(data);
         return device;
@@ -538,11 +564,21 @@ const Store = (function() {
     function updateDevice(id, updates) {
         const data = getAll();
         if (!data.devices) return null;
-        
+
         const index = data.devices.findIndex(d => d.id === id);
         if (index === -1) return null;
-        
+
         data.devices[index] = { ...data.devices[index], ...updates };
+
+        // 同步设备标签到全局 tags 数组
+        if (updates.tags) {
+            updates.tags.forEach(tag => {
+                if (!data.tags.includes(tag)) {
+                    data.tags.push(tag);
+                }
+            });
+        }
+
         saveAll(data);
         return data.devices[index];
     }
